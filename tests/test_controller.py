@@ -272,3 +272,25 @@ class TestDemoConfig:
             assert a.gear_ratio == 1.0
             assert a.counts_per_output_rev == 524288
             assert a.limits.max_velocity_deg_s == 30.0
+
+
+class TestSpeedCap:
+    def test_speed_cap_applies_to_the_pace_setting_axis(self):
+        """A lowered speed must slow every axis, including the slowest one,
+        and the move must take the planned time (it ran at the config ceiling
+        before, arriving early)."""
+        mc, slaves = make_controller(max_velocity_deg_s=30.0)
+        enable(mc, slaves)
+        duration = mc.move_coordinated({"joint1": 60.0, "joint2": 20.0},
+                                       max_velocity_deg_s=15.0)
+        lead = mc.axis("joint1")
+        assert lead.profile.max_velocity <= lead.cfg.velocity_to_counts(15.0) * 1.001
+        cycles = cycles_until_done(mc, slaves, ["joint1", "joint2"])
+        assert cycles * DT == pytest.approx(duration, rel=0.02)
+
+    def test_cap_above_config_is_ignored(self):
+        mc, slaves = make_controller(max_velocity_deg_s=10.0)
+        enable(mc, slaves)
+        mc.move_coordinated({"joint1": 30.0}, max_velocity_deg_s=100.0)
+        a = mc.axis("joint1")
+        assert a.profile.max_velocity <= a.cfg.velocity_to_counts(10.0) * 1.001

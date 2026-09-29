@@ -1,16 +1,19 @@
-"""Maxon EPOS4 / IDX drives (including the HEJ gearhead joints).
+"""Maxon EPOS4 drives, including the HEJ joints (verified on a HEJ 70).
 
-Differences from eRob that matter here:
+What the HEJ 70 on the bench reports (read over SDO, see configs/demo_1x_hej70.yaml):
 
-* The encoder sits on the *motor* shaft, before the gearbox, so `gear_ratio`
-  in the axis configuration must be the real reduction (e.g. 100 for a 100:1
-  HEJ). `counts_per_rev` is the encoder's counts per motor revolution, which
-  is 4x the line count for a quadrature encoder.
-* EPOS4 enforces a following-error window (0x6065) and trips on violation.
-  The window is set from the axis limits so the drive and the master agree.
-* Modes of operation must be selected before OP if the drive is configured
-  for a fixed mode; mapping 0x6060 into the RxPDO (the default here) makes it
-  switchable at runtime.
+* Gear 18:1 (0x3003). Sensors: digital incremental encoder (20480 inc/rev,
+  motor side), SSI absolute encoder, Hall sensors; dual-loop control.
+* Main position sensor resolution 16384 inc/rev (0x3000:05). This is the SSI
+  encoder, not the motor encoder, so position values are OUTPUT-shaft counts:
+  configure `counts_per_rev: 16384` with `gear_ratio: 1.0`. The drive's gear
+  ratio is still read from 0x3003 to limit motor speed (0x6080).
+* Velocity objects use EPOS4 velocity units (0x60A9 = 0.001 rpm), not
+  counts/s, so 0x607F is not written and target velocity is not mapped: CSV
+  stays refused until the unit/shaft relation is verified on hardware.
+* 0x6502 reads 0x624 (no CSP) but the drive accepts PP, PV, HMM, CSP, CSV and
+  CST in 0x6060. The object is ignored.
+* Factory PDOs map only controlword/statusword; the layout below replaces them.
 """
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ import struct
 import pysoem
 
 from .. import cia402 as c
+from ..pdo import PdoEntry, PdoMap, pdo_from_config
 from .base import Driver, register
 
 log = logging.getLogger(__name__)
@@ -37,6 +41,8 @@ OD_MAX_MOTOR_SPEED = 0x6080
 OD_INTERPOLATION_TIME = 0x60C2
 #: EPOS4 axis configuration; writing it requires the drive to be in PRE-OP.
 OD_MAXON_AXIS_CONFIG = 0x3000
+#: Gear configuration: :1 reduction numerator, :2 denominator.
+OD_GEAR_CONFIG = 0x3003
 
 
 @register
@@ -45,24 +51,31 @@ class MaxonDriver(Driver):
     display_name = "Maxon EPOS4/IDX"
     vendor_id = MAXON_VENDOR_ID
 
+    # 16/32-bit entries only, even lengths, no dummy entries; the mode is set
+    # over SDO. Target torque is per-mille of rated torque (standard CiA 402
+    # unit), so CST is usable; target velocity is deliberately left out.
+    def rx_pdo(self) -> PdoMap:
+        if self.cfg.rx_pdo:
+            return pdo_from_config(self.cfg.rx_pdo, self.cfg.rx_pdo_index)
+        return PdoMap(self.cfg.rx_pdo_index, [
+            PdoEntry("controlword", c.OD_CONTROLWORD, 0, 16),
+            PdoEntry("target_position", c.OD_TARGET_POSITION, 0, 32, signed=True),
+            PdoEntry("target_torque", c.OD_TARGET_TORQUE, 0, 16, signed=True),
+        ])
+
+    def tx_pdo(self) -> PdoMap:
+        if self.cfg.tx_pdo:
+            return pdo_from_config(self.cfg.tx_pdo, self.cfg.tx_pdo_index)
+        return PdoMap(self.cfg.tx_pdo_index, [
+            PdoEntry("statusword", c.OD_STATUSWORD, 0, 16),
+            PdoEntry("position_actual", c.OD_POSITION_ACTUAL, 0, 32, signed=True),
+            PdoEntry("torque_actual", c.OD_TORQUE_ACTUAL, 0, 16, signed=True),
+        ])
+
     def configure_extra(self, slave: pysoem.CdefSlave) -> None:
         """Set the interpolation period and the drive-side error windows."""
-        self._write_interpolation_period(slave)
+        self.write_interpolation_period(slave)
         self._write_error_windows(slave)
-
-    def _write_interpolation_period(self, slave: pysoem.CdefSlave) -> None:
-        already_set = any(
-            (int(i["index"], 0) if isinstance(i["index"], str) else i["index"])
-            == OD_INTERPOLATION_TIME
-            for i in self.cfg.startup_sdo
-        )
-        if already_set:
-            return
-        try:
-            slave.sdo_write(OD_INTERPOLATION_TIME, 1, struct.pack("<B", 2))
-            slave.sdo_write(OD_INTERPOLATION_TIME, 2, struct.pack("<b", -3))
-        except Exception:  # noqa: BLE001 - optional on some firmware
-            log.debug("%s: 0x60C2 not writable", self.cfg.name)
 
     def _write_error_windows(self, slave: pysoem.CdefSlave) -> None:
         """Mirror the master's following-error limit into the drive.
@@ -85,21 +98,38 @@ class MaxonDriver(Driver):
             log.debug("%s: 0x6065 not writable", self.cfg.name)
 
     def apply_motion_limits(self, slave: pysoem.CdefSlave) -> None:
-        """Also cap the motor speed, which EPOS4 enforces independently.
+        """Position limits (0x607D) and a motor speed cap (0x6080).
 
-        0x6080 is in rpm at the *motor* shaft, so the output-shaft limit from
-        the configuration is multiplied by the gear ratio.
+        0x607F is skipped: its unit is EPOS4 velocity units, not counts/s.
+        0x6080 is rpm at the MOTOR shaft, so the output limit is multiplied by
+        the drive's own gear ratio from 0x3003 (the axis gear_ratio is 1.0
+        when positions come from an output-side encoder, as on the HEJ). A 50%
+        margin keeps the cap from clipping the master's own profile peak.
         """
-        super().apply_motion_limits(slave)
+        self.write_position_limits(slave)
+        ratio = self.read_gear_ratio(slave)
         output_rpm = self.cfg.limits.max_velocity_deg_s * 60.0 / 360.0
-        motor_rpm = int(round(output_rpm * self.cfg.gear_ratio))
+        motor_rpm = int(round(output_rpm * ratio * 1.5))
         if motor_rpm <= 0:
             return
         try:
             slave.sdo_write(OD_MAX_MOTOR_SPEED, 0, struct.pack("<I", motor_rpm))
-            log.info("%s: max motor speed = %d rpm", self.cfg.name, motor_rpm)
+            log.info("%s: max motor speed = %d rpm (gear %.3g:1)",
+                     self.cfg.name, motor_rpm, ratio)
         except Exception:  # noqa: BLE001
-            log.debug("%s: 0x6080 not writable", self.cfg.name)
+            log.warning("%s: could not write 0x6080 max motor speed", self.cfg.name)
+
+    def read_gear_ratio(self, slave: pysoem.CdefSlave) -> float:
+        """Gear reduction configured in the drive (0x3003), falling back to the
+        axis gear_ratio when it cannot be read."""
+        try:
+            num = struct.unpack("<I", slave.sdo_read(OD_GEAR_CONFIG, 1)[:4])[0]
+            den = struct.unpack("<I", slave.sdo_read(OD_GEAR_CONFIG, 2)[:4])[0]
+            if num > 0 and den > 0:
+                return num / den
+        except Exception:  # noqa: BLE001
+            log.debug("%s: 0x3003 not readable", self.cfg.name)
+        return self.cfg.gear_ratio
 
     def read_rated_torque_mnm(self, slave: pysoem.CdefSlave) -> float:
         """Read 0x6076 (rated torque, mNm) so per-mille torque can be reported

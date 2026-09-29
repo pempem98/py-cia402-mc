@@ -1,23 +1,23 @@
-"""Demo: two eRob70 joints, free-standing.
+"""Staged motion demo for any bus config (tested: 2x eRob70, 1x Maxon HEJ 70).
 
 Runs a staged sequence that starts slow and only speeds up once each stage has
 proved the configuration is right:
 
   Stage 1  verify  - 2 deg on each axis in turn, at 5 deg/s. Confirms slave
-                     addressing and direction before anything larger moves.
+                     addressing, direction and scale before anything larger.
   Stage 2  single  - independent point-to-point moves on each axis.
-  Stage 3  coord   - both axes moving together over unequal distances,
-                     starting and finishing at the same moment.
-  Stage 4  speed   - the same coordinated move at the configured ceiling.
+  Stage 3  coord   - all axes together over unequal distances, starting and
+                     finishing at the same moment (one axis: a plain move).
+  Stage 4  speed   - the same move at the configured ceiling.
 
 Every stage prompts before it runs, so the sequence can be stopped at the first
-sign that something is wrong. Ctrl+C at any point disables both drives.
+sign that something is wrong. Ctrl+C at any point disables every drive.
 
 Usage (Administrator on Windows):
 
-    python demo_2x_erob70.py
-    python demo_2x_erob70.py --yes          # no prompts
-    python demo_2x_erob70.py --stage 3      # start from a later stage
+    python demo.py -c configs/demo_1x_hej70.yaml
+    python demo.py -c configs/demo_2x_erob70.yaml --yes     # no prompts
+    python demo.py -c configs/demo_1x_hej70.yaml --stage 3  # skip ahead
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from ethercat_mc.axis import AxisError
 from ethercat_mc.cli import choose_adapter
 from ethercat_mc.master import BusError
 
-CONFIG = "configs/demo_2x_erob70.yaml"
+CONFIG = "configs/demo_1x_hej70.yaml"
 
 #: The first moves run far below the configured ceiling: if counts_per_rev or
 #: direction is wrong, a slow axis can be stopped before it does damage.
@@ -91,7 +91,7 @@ def stage_verify(mc: MotionController, auto_yes: bool) -> bool:
     print("  If the wrong motor moves, slave_position is swapped in the YAML.")
     print("  If it turns the wrong way, flip `direction` to -1.")
 
-    for name in ("joint1", "joint2"):
+    for name in [a.name for a in mc.axes]:
         if not confirm(f"Move {name} by +2 deg at {VERIFY_SPEED_DEG_S} deg/s?",
                        auto_yes):
             continue
@@ -110,15 +110,17 @@ def stage_single(mc: MotionController, auto_yes: bool) -> bool:
     print("STAGE 2 - independent control: each axis moves separately")
     print("=" * 68)
 
-    for name, target in (("joint1", 30.0), ("joint2", -20.0)):
+    targets = [(a.name, 30.0 if i % 2 == 0 else -20.0)
+               for i, a in enumerate(mc.axes)]
+    for name, target in targets:
         if not confirm(f"Move {name} to {target:+.1f} deg at "
                        f"{MODERATE_SPEED_DEG_S} deg/s?", auto_yes):
             continue
         if not move_and_wait(mc, name, target, MODERATE_SPEED_DEG_S):
             return False
 
-    if confirm("Return both axes to 0 deg?", auto_yes):
-        for name in ("joint1", "joint2"):
+    if confirm("Return all axes to 0 deg?", auto_yes):
+        for name in [a.name for a in mc.axes]:
             if not move_and_wait(mc, name, 0.0, MODERATE_SPEED_DEG_S):
                 return False
     return True
@@ -126,29 +128,27 @@ def stage_single(mc: MotionController, auto_yes: bool) -> bool:
 
 def stage_coordinated(mc: MotionController, auto_yes: bool,
                       speed_deg_s: float, label: str) -> bool:
-    """Both axes over unequal distances, arriving together.
+    """All axes over unequal distances, arriving together.
 
-    This is what the single cyclic loop buys: joint1 travels three times as far
-    as joint2, and the slower-scaled axis waits for neither - both ramp up,
-    cruise and stop on the same schedule.
+    This is what the single cyclic loop buys: the first axis travels furthest
+    and sets the pace; the others are slowed so every axis ramps up, cruises
+    and stops on the same schedule. With one axis it is a plain move.
     """
     print("\n" + "=" * 68)
     print(f"STAGE {label} - coordinated motion at {speed_deg_s} deg/s")
     print("=" * 68)
-    print("  joint1 travels 60 deg, joint2 travels 20 deg.")
-    print("  Both should start and stop at the same instant.")
+    distances = {a.name: 60.0 / (i + 1) for i, a in enumerate(mc.axes)}
+    print("  " + ", ".join(f"{n} travels {d:.0f} deg" for n, d in distances.items()))
+    if len(mc.axes) > 1:
+        print("  All axes should start and stop at the same instant.")
 
-    for axis in mc.axes:
-        axis.set_profile_limits(velocity_deg_s=speed_deg_s)
-
-    for targets in ({"joint1": 60.0, "joint2": 20.0},
-                    {"joint1": 0.0, "joint2": 0.0}):
+    for targets in (distances, {n: 0.0 for n in distances}):
         pretty = ", ".join(f"{n}={v:+.1f}" for n, v in targets.items())
         if not confirm(f"Coordinated move to {pretty}?", auto_yes):
             continue
 
         started = time.perf_counter()
-        duration = mc.move_coordinated(targets)
+        duration = mc.move_coordinated(targets, max_velocity_deg_s=speed_deg_s)
         print(f"    planned duration: {duration:.2f} s")
 
         if not mc.wait_for_targets(list(targets), timeout=duration + 10.0):
@@ -158,7 +158,7 @@ def stage_coordinated(mc: MotionController, auto_yes: bool,
             return False
 
         elapsed = time.perf_counter() - started
-        print(f"    both arrived in {elapsed:.2f} s "
+        print(f"    arrived in {elapsed:.2f} s "
               f"(planned {duration:.2f} s)")
         for name in targets:
             axis = mc.axis(name)
@@ -195,8 +195,8 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cfg = load_config(args.config)
-    if len(cfg.axes) != 2:
-        print(f"This demo expects 2 axes, the config has {len(cfg.axes)}.")
+    if not cfg.axes:
+        print(f"No axes in {args.config}.")
         return 1
 
     # Stage 4 runs at whatever ceiling the configuration allows.
@@ -213,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
               f"{a.counts_per_output_rev:,.0f} counts/rev, "
               f"direction {a.direction:+d}, "
               f"limits [{a.limits.min_deg}, {a.limits.max_deg}] deg")
-    print("\n  !! Confirm counts_per_rev against the eRob70 manual before")
+    print("\n  !! Confirm counts_per_rev against the drive manual before")
     print("     the first run. A wrong value scales every angle.")
 
     adapter = choose_adapter(cfg.adapter)
@@ -236,14 +236,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"    {axis.name}: was {raw:8.3f} deg -> now "
                       f"{axis.position_deg:+.3f} deg")
 
-            if not confirm("Enable both drives?", args.yes):
+            if not confirm("Enable all drives?", args.yes):
                 print("Nothing enabled; exiting.")
                 return 0
             if not mc.enable_all():
                 print("!! Could not enable every axis:")
                 show(mc)
                 return 1
-            print("    both axes enabled")
+            print("    all axes enabled")
 
             for number in sorted(STAGES):
                 if number < args.stage:
@@ -261,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         except KeyboardInterrupt:
-            print("\n\nInterrupted - stopping both axes.")
+            print("\n\nInterrupted - stopping all axes.")
             mc.stop_all()
             time.sleep(0.2)
             return 130

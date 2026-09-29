@@ -35,6 +35,8 @@ class FakeSlave:
 
     # --- the parts Axis uses ---
     def sdo_read(self, index, subindex=0):
+        if index == 0x6064:
+            return struct.pack("<i", self.position)
         return b"\x00\x00\x00\x00"
 
     def sdo_write(self, index, subindex, data):
@@ -420,3 +422,33 @@ class TestERobLayout:
         assert values["controlword"] == 0x0F
         assert values["target_position"] == -5
         assert values["digital_outputs"] == 0
+
+
+class TestDriveLimitWrites:
+    def test_window_is_opened_before_narrowing(self):
+        """EPOS4 faults (0x8A82) if the window ever excludes the position,
+        which the old min-then-max order did from factory 0/0 limits."""
+        from ethercat_mc.drivers.maxon import MaxonDriver
+
+        slave = FakeSlave(position=4351)
+        cfg = AxisConfig(name="h", slave_position=0, counts_per_rev=16384,
+                         zero_offset_counts=4351,
+                         limits=LimitConfig(min_deg=-180.0, max_deg=180.0))
+        MaxonDriver(cfg).write_position_limits(slave)
+        writes = [(sub, struct.unpack("<i", d)[0])
+                  for idx, sub, d in slave.sdo_writes if idx == 0x607D]
+        assert writes[:2] == [(1, -2**31), (2, 2**31 - 1)]
+        window = [-2**31, 2**31 - 1]
+        for sub, value in writes:
+            window[sub - 1] = value
+            assert window[0] <= 4351 <= window[1]
+        assert window == [4351 - 8192, 4351 + 8192]
+
+    def test_window_excluding_position_is_skipped(self):
+        from ethercat_mc.drivers.maxon import MaxonDriver
+
+        slave = FakeSlave(position=100_000)
+        cfg = AxisConfig(name="h", slave_position=0, counts_per_rev=16384,
+                         limits=LimitConfig(min_deg=-180.0, max_deg=180.0))
+        MaxonDriver(cfg).write_position_limits(slave)
+        assert not [w for w in slave.sdo_writes if w[0] == 0x607D]

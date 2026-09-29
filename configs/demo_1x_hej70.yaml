@@ -1,0 +1,62 @@
+# Demo: one Maxon HEJ 70 joint (EPOS4 inside), free-standing, no load.
+#
+# Values below were read from the drive itself (SDO, 2026-09-29):
+#   vendor 0x000000FB, product 0x8A020045, rev 0x01610110, serial 704643205
+#   gear 18:1 (0x3003), main position sensor 16384 inc/rev (0x3000:05, SSI)
+#   motor encoder 20480 inc/rev, Hall sensors, dual-loop control
+#
+#   python -m ethercat_mc.cli info -c configs/demo_1x_hej70.yaml
+#   python demo.py -c configs/demo_1x_hej70.yaml
+
+bus:
+  # The TwinCAT-Intel PCI Ethernet Adapter. Stop TwinCAT (or set the
+  # TwinCAT3 System Service to Manual) for reliable mailbox traffic.
+  adapter: '\Device\NPF_{F7C77A8E-B845-460F-9552-BB8D10CB303A}'
+  # 4 ms: at 2 ms the EPOS4 reported EtherCAT communication errors (0x8180)
+  # and dropped out of OP on this Windows host; at 4 ms it ran clean.
+  cycle_time_s: 0.004
+  use_dc: false
+  pdo_timeout_us: 2000
+  max_wkc_errors: 50
+
+axes:
+  - name: hej70
+    driver: maxon
+    slave_position: 0
+
+    vendor_id: 0x000000FB       # Maxon, confirmed on the bus
+    product_code: 0x8A020045    # EPOS4 in the HEJ 70
+
+    # Position values come from the main sensor, the 14-bit SSI absolute
+    # encoder (16384 inc/rev), not from the motor encoder (20480 inc/rev).
+    # They are therefore OUTPUT-shaft counts: the 18:1 gear is already inside
+    # them, so gear_ratio stays 1.0 here. The driver reads 18:1 from 0x3003 on
+    # its own to cap motor speed.
+    #
+    # VERIFY with the stage-1 2 deg move. If the output turns only ~0.1 deg
+    # instead of 2, the main sensor is on the motor side after all: keep
+    # counts_per_rev: 16384 and set gear_ratio: 18.0. This value was chosen
+    # so that a wrong guess makes motion 18x SMALLER, never 18x larger.
+    counts_per_rev: 16384
+    gear_ratio: 1.0
+    direction: 1
+    zero_offset_counts: 0
+
+    default_mode: csp
+
+    limits:
+      min_deg: -180.0
+      max_deg: 180.0
+      max_velocity_deg_s: 30.0
+      max_acceleration_deg_s2: 60.0
+      max_step_deg: 180.0
+      # 5 deg is ~227 counts; also written to the drive (0x6065), which was
+      # 2000 counts (~44 deg) from the factory.
+      max_following_error_deg: 5.0
+      max_torque_permille: 300
+
+    homing:
+      # The SSI encoder is absolute; the demo zeroes at the current pose.
+      enabled: false
+      method: 37
+      timeout_s: 30.0

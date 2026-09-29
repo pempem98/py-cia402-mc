@@ -85,24 +85,30 @@ vel joint1 5.0        # 5 deg/s
 mode joint1 csp
 ```
 
-## Demo: two eRob70
+## Demo
 
-[configs/demo_2x_erob70.yaml](configs/demo_2x_erob70.yaml) and
-[demo_2x_erob70.py](demo_2x_erob70.py) drive two free-standing eRob70 joints
-through four stages that escalate only once each has proved the configuration:
+[demo.py](demo.py) runs any bus config through four stages that escalate only
+once each has proved the configuration:
+
+| Config | Hardware |
+| --- | --- |
+| [configs/demo_1x_hej70.yaml](configs/demo_1x_hej70.yaml) | one Maxon HEJ 70 (EPOS4), 4 ms cycle |
+| [configs/demo_2x_erob70.yaml](configs/demo_2x_erob70.yaml) | two eRob70, 2 ms cycle |
 
 | Stage | What it does | Speed |
 | --- | --- | --- |
 | 1 | 2 deg on each axis in turn | 5 deg/s |
 | 2 | independent point-to-point moves | 15 deg/s |
-| 3 | coordinated: 60 deg and 20 deg, arriving together | 15 deg/s |
-| 4 | the same coordinated move at the ceiling | 30 deg/s |
+| 3 | 60 deg (and 30 deg on a second axis), arriving together | 15 deg/s |
+| 4 | the same move at the ceiling | 30 deg/s |
 
 ```bash
-python demo_2x_erob70.py            # prompts before each stage
-python demo_2x_erob70.py --yes      # no prompts
-python demo_2x_erob70.py --stage 3  # skip ahead
+python demo.py -c configs/demo_1x_hej70.yaml             # prompts before each stage
+python demo.py -c configs/demo_2x_erob70.yaml --yes      # no prompts
+python demo.py -c configs/demo_1x_hej70.yaml --stage 3   # skip ahead
 ```
+
+The demo takes the current pose as 0 deg for every axis before enabling.
 
 Stage 1 exists because the two things most likely to be wrong —
 `counts_per_rev` and `direction` — are both cheap to check with a 2 deg move
@@ -172,7 +178,7 @@ everything else is configuration and supervision.
 python -m pytest
 ```
 
-129 tests, no hardware required. [test_axis.py](tests/test_axis.py) runs the
+142 tests, no hardware required. [test_axis.py](tests/test_axis.py) runs the
 axis against a simulated CiA 402 drive, so the enable sequence, mode switching
 and the safety latches are all covered.
 

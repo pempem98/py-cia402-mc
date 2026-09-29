@@ -41,8 +41,28 @@ class Driver:
     #: Expected vendor ID, or None to skip the check.
     vendor_id: int | None = None
 
-    def __init__(self, cfg: AxisConfig):
+    def __init__(self, cfg: AxisConfig, cycle_time_s: float = 0.002):
         self.cfg = cfg
+        #: Bus cycle time; drives that interpolate in CSP need to know it.
+        self.cycle_time_s = cycle_time_s
+
+    def write_interpolation_period(self, slave: pysoem.CdefSlave) -> None:
+        """Set 0x60C2 (interpolation time period) to the bus cycle time.
+
+        In CSP the drive interpolates between setpoints over this period; if
+        it differs from the real cycle the motion stutters, and EPOS4 can
+        report EtherCAT errors. A startup_sdo entry for 0x60C2 takes priority.
+        """
+        if any((int(i["index"], 0) if isinstance(i["index"], str) else i["index"])
+               == 0x60C2 for i in self.cfg.startup_sdo):
+            return
+        ms = int(round(self.cycle_time_s * 1000))
+        try:
+            slave.sdo_write(0x60C2, 1, struct.pack("<B", ms))
+            slave.sdo_write(0x60C2, 2, struct.pack("<b", -3))
+            log.debug("%s: interpolation period %d ms", self.cfg.name, ms)
+        except Exception:  # noqa: BLE001 - optional on some firmware
+            log.debug("%s: 0x60C2 not writable", self.cfg.name)
 
     # --- PDO layout ------------------------------------------------------
     def rx_pdo(self) -> PdoMap:
@@ -155,6 +175,12 @@ class Driver:
         but a drive that enforces its own limits also protects against a master
         that stops sending or sends nonsense.
         """
+        self.write_max_profile_velocity(slave)
+        self.write_position_limits(slave)
+
+    def write_max_profile_velocity(self, slave: pysoem.CdefSlave) -> None:
+        """0x607F in counts/s. Only valid for drives whose velocity unit is
+        position-units per second; drivers with another unit override this."""
         limits = self.cfg.limits
         max_velocity = self.cfg.velocity_to_counts(limits.max_velocity_deg_s)
         try:
@@ -164,12 +190,32 @@ class Driver:
         except Exception:  # noqa: BLE001 - optional object on some drives
             log.debug("%s: 0x607F not writable", self.cfg.name)
 
+    def write_position_limits(self, slave: pysoem.CdefSlave) -> None:
+        """0x607D software position limits, in raw counts around the zero."""
+        limits = self.cfg.limits
         if limits.min_deg is not None and limits.max_deg is not None:
             lo = self.cfg.deg_to_counts(limits.min_deg)
             hi = self.cfg.deg_to_counts(limits.max_deg)
             if lo > hi:  # a negative `direction` flips the order
                 lo, hi = hi, lo
+            # Never let the drive see a window that excludes the current
+            # position, even between the two writes: EPOS4 faults at once
+            # (0x8A82). So skip a window that would not contain it, and open
+            # the window fully before narrowing it to the new bounds.
             try:
+                pos = struct.unpack(
+                    "<i", slave.sdo_read(c.OD_POSITION_ACTUAL, 0)[:4])[0]
+            except Exception:  # noqa: BLE001
+                pos = None
+            if pos is not None and not lo <= pos <= hi:
+                log.warning(
+                    "%s: not writing drive limits [%d, %d]: position %d is "
+                    "outside them (zero the axis first); master-side limits "
+                    "still apply", self.cfg.name, lo, hi, pos)
+                return
+            try:
+                slave.sdo_write(c.OD_SW_POS_LIMIT, 1, struct.pack("<i", -2**31))
+                slave.sdo_write(c.OD_SW_POS_LIMIT, 2, struct.pack("<i", 2**31 - 1))
                 slave.sdo_write(c.OD_SW_POS_LIMIT, 1, struct.pack("<i", lo))
                 slave.sdo_write(c.OD_SW_POS_LIMIT, 2, struct.pack("<i", hi))
                 log.info("%s: drive position limits set to [%d, %d] counts",
@@ -203,7 +249,7 @@ def register(cls: type[Driver]) -> type[Driver]:
     return cls
 
 
-def get_driver(cfg: AxisConfig) -> Driver:
+def get_driver(cfg: AxisConfig, cycle_time_s: float = 0.002) -> Driver:
     """Instantiate the driver named by `cfg.driver`."""
     try:
         cls = _REGISTRY[cfg.driver]
@@ -212,7 +258,7 @@ def get_driver(cfg: AxisConfig) -> Driver:
             f"axis {cfg.name}: unknown driver {cfg.driver!r}; available: "
             f"{', '.join(sorted(_REGISTRY))}"
         ) from None
-    return cls(cfg)
+    return cls(cfg, cycle_time_s)
 
 
 def available_drivers() -> list[str]:

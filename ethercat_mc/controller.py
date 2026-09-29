@@ -89,7 +89,7 @@ class MotionController:
         pending: list[tuple] = []
         for axis_cfg in self.cfg.axes:
             slave = self.master.master.slaves[axis_cfg.slave_position]
-            driver = drivers.get_driver(axis_cfg)
+            driver = drivers.get_driver(axis_cfg, self.cfg.cycle_time_s)
             driver.check_identity(slave)
             config_funcs[axis_cfg.slave_position] = driver.make_config_func(slave)
             pending.append((axis_cfg, slave, driver))
@@ -244,6 +244,7 @@ class MotionController:
         self,
         targets: dict[str, float],
         duration: float | None = None,
+        max_velocity_deg_s: float | None = None,
     ) -> float:
         """Move several axes so they start and finish together.
 
@@ -274,11 +275,22 @@ class MotionController:
             distance = abs(target_counts - axis.profile.position)
             plan.append((axis, target_counts, distance))
 
-        # The natural duration of each move, at that axis's configured limits.
+        # One set of limits per axis, used both to plan the duration and to
+        # run the move: the configured ceiling, optionally lowered by
+        # `max_velocity_deg_s`. Planning with one set and running with another
+        # made the pace-setting axis run faster than planned and arrive early.
+        def limits_for(axis):
+            v_deg = axis.cfg.limits.max_velocity_deg_s
+            if max_velocity_deg_s is not None:
+                v_deg = min(v_deg, max_velocity_deg_s)
+            return (axis.cfg.velocity_to_counts(v_deg),
+                    axis.cfg.velocity_to_counts(
+                        axis.cfg.limits.max_acceleration_deg_s2))
+
+        limits = [limits_for(axis) for axis, _, _ in plan]
         natural = [
-            sync_duration(distance, axis.profile.max_velocity,
-                          axis.profile.max_acceleration)
-            for axis, _, distance in plan
+            sync_duration(distance, v, a)
+            for (_, _, distance), (v, a) in zip(plan, limits)
         ]
         total = duration if duration is not None else max(natural, default=0.0)
         if total <= 0.0:
@@ -301,12 +313,7 @@ class MotionController:
         slowest_index = natural.index(max(natural)) if natural else -1
 
         for i, (axis, target_counts, distance) in enumerate(plan):
-            velocity_limit = axis.cfg.velocity_to_counts(
-                axis.cfg.limits.max_velocity_deg_s
-            )
-            acceleration_limit = axis.cfg.velocity_to_counts(
-                axis.cfg.limits.max_acceleration_deg_s2
-            )
+            velocity_limit, acceleration_limit = limits[i]
 
             if i == slowest_index and duration is None:
                 # This axis defines `total`, so it runs exactly as configured.

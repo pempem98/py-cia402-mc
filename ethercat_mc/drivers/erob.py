@@ -72,25 +72,7 @@ class ERobDriver(Driver):
         overshoots between frames, which shows up as vibration at the cycle
         frequency.
         """
-        self._write_interpolation_period(slave)
-
-    def _write_interpolation_period(self, slave: pysoem.CdefSlave) -> None:
-        # The bus config is not visible from the driver, so the cycle time
-        # comes through startup_sdo when it must differ from the 2 ms default.
-        already_set = any(
-            (int(i["index"], 0) if isinstance(i["index"], str) else i["index"])
-            == OD_INTERPOLATION_TIME
-            for i in self.cfg.startup_sdo
-        )
-        if already_set:
-            return
-        try:
-            # 2 ms = 2 * 10^-3 s
-            slave.sdo_write(OD_INTERPOLATION_TIME, 1, struct.pack("<B", 2))
-            slave.sdo_write(OD_INTERPOLATION_TIME, 2, struct.pack("<b", -3))
-            log.debug("%s: interpolation time period set to 2 ms", self.cfg.name)
-        except Exception:  # noqa: BLE001 - not present on all firmware
-            log.debug("%s: 0x60C2 not writable, leaving default", self.cfg.name)
+        self.write_interpolation_period(slave)
 
     def check_identity(self, slave: pysoem.CdefSlave) -> None:
         """eRob firmware revisions report different vendor IDs, so only an
