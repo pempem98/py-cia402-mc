@@ -29,10 +29,10 @@ axes:
     driver: erob
     slave_position: 0      # first drive on the cable
 
-    # Fill these in from `scan` output once confirmed. Pinning them turns a
-    # swapped cable into a startup error instead of the wrong joint moving.
-    vendor_id: null
-    product_code: null
+    # Confirmed with `scan`. A drive that reports anything else at this
+    # position stops startup instead of the wrong joint moving.
+    vendor_id: 0x5A65726F    # confirmed on the bus: "ZeroErr Driver"
+    product_code: 0x00029252
 
     # eRob reads a 19-bit absolute encoder on the OUTPUT shaft, so the
     # harmonic drive is already accounted for and gear_ratio stays 1.0.
@@ -72,9 +72,10 @@ axes:
       max_torque_permille: 300
 
     homing:
-      # Off: an absolute encoder already knows where it is, and with nothing
-      # attached there is no mechanical zero worth searching for. Use the
-      # `zero` shell command to make the current position 0 deg instead.
+      # Off, and must stay off: this eRob firmware does not support homing
+      # (0x6502 = 0x38D: PP, PV, PT, CSP, CSV, CST only). The absolute encoder
+      # already knows where it is; use the `zero` shell command to make the
+      # current position 0 deg instead.
       enabled: false
       method: 35
       timeout_s: 30.0
@@ -83,8 +84,8 @@ axes:
     driver: erob
     slave_position: 1      # second drive on the cable
 
-    vendor_id: null
-    product_code: null
+    vendor_id: 0x5A65726F    # confirmed on the bus: "ZeroErr Driver"
+    product_code: 0x00029252
 
     counts_per_rev: 524288
     gear_ratio: 1.0
