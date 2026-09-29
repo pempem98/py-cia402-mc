@@ -208,6 +208,10 @@ class Axis:
             self.mode = mode
             self._outputs["mode_of_operation"] = int(mode)
             self._seed_setpoints()
+            # Seed again on the cyclic thread, from the next fresh input: the
+            # position read here can be a cycle old, e.g. right after homing
+            # redefined it, and a stale seed commands a jump to the old spot.
+            self._reseed_pending = True
         log.info("%s: mode -> %s", self.name, mode.name)
 
     def _require_mapped(self, entry: str, what: str) -> None:
@@ -394,6 +398,14 @@ class Axis:
         """Advance the axis by one cycle. Called from the cyclic thread."""
         self.read_inputs()
         self._estimate_velocity(dt)
+        if getattr(self, "_reseed_pending", False):
+            with self._mode_lock:
+                self._seed_setpoints()
+                self._reseed_pending = False
+            # read_inputs() computed the error against the stale setpoint.
+            self.state.following_error_deg = self.cfg.counts_to_deg_delta(
+                self._outputs["target_position"] - self.state.position_counts
+            )
 
         if self._first_cycle and self.state.statusword:
             # The first valid statusword tells us where the axis really is.

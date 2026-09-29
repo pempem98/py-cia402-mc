@@ -98,26 +98,15 @@ class MaxonDriver(Driver):
             log.debug("%s: 0x6065 not writable", self.cfg.name)
 
     def apply_motion_limits(self, slave: pysoem.CdefSlave) -> None:
-        """Position limits (0x607D) and a motor speed cap (0x6080).
+        """Position limits (0x607D) only.
 
-        0x607F is skipped: its unit is EPOS4 velocity units, not counts/s.
-        0x6080 is rpm at the MOTOR shaft, so the output limit is multiplied by
-        the drive's own gear ratio from 0x3003 (the axis gear_ratio is 1.0
-        when positions come from an output-side encoder, as on the HEJ). A 50%
-        margin keeps the cap from clipping the master's own profile peak.
+        Velocity objects (0x607F, 0x6080) are left at the drive's values: on
+        the HEJ 70 they are in EPOS4 velocity units (0x60A9 = 0.001 rpm),
+        apparently at the main-sensor (output) shaft. Writing 0x6080 as motor
+        rpm (135) capped the joint at ~0.8 deg/s and it could not follow a
+        30 deg move. The master's profile limits speed instead.
         """
         self.write_position_limits(slave)
-        ratio = self.read_gear_ratio(slave)
-        output_rpm = self.cfg.limits.max_velocity_deg_s * 60.0 / 360.0
-        motor_rpm = int(round(output_rpm * ratio * 1.5))
-        if motor_rpm <= 0:
-            return
-        try:
-            slave.sdo_write(OD_MAX_MOTOR_SPEED, 0, struct.pack("<I", motor_rpm))
-            log.info("%s: max motor speed = %d rpm (gear %.3g:1)",
-                     self.cfg.name, motor_rpm, ratio)
-        except Exception:  # noqa: BLE001
-            log.warning("%s: could not write 0x6080 max motor speed", self.cfg.name)
 
     def read_gear_ratio(self, slave: pysoem.CdefSlave) -> float:
         """Gear reduction configured in the drive (0x3003), falling back to the

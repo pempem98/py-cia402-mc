@@ -478,3 +478,20 @@ class TestHejFixes:
         assert not axis.at_target     # default 0.05 deg
         axis.cfg.position_tolerance_deg = 0.3
         assert axis.at_target
+
+
+class TestReseedAfterModeChange:
+    def test_position_redefined_after_mode_change_does_not_cause_a_jump(self):
+        """Homing moved the drive's position from 96.8 deg to 0 while the setpoint
+        stayed at 96.8 deg, commanding a jump (seen on the HEJ 70). The seed
+        must follow the position reported on the next cycle."""
+        slave = FakeSlave(position=348_480)   # 96.8 deg at 3600 counts/deg
+        axis, slave = make_axis(slave=slave)
+        axis.request_enable()
+        run_cycles(axis, slave, 10)
+        axis.set_mode(c.Mode.CSP)             # seeded from 96.8 deg...
+        slave.position = 0                    # ...then the drive redefines it
+        slave._refresh_input()
+        run_cycles(axis, slave, 3)
+        assert axis._outputs["target_position"] == 0
+        assert axis.fault_reason is None

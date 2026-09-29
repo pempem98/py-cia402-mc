@@ -98,6 +98,11 @@ def run(axis: Axis, timeout: float | None = None) -> bool:
         raise AxisError(f"{axis.name}: homing timed out after {timeout:.1f} s")
     finally:
         axis._homing_active = False
+        # Homing redefines the position (method 37 sets it to the home
+        # offset). Give the new value a few cycles to arrive over PDO; the
+        # mode change then re-seeds the setpoints from it on the cyclic
+        # thread, so the axis holds where it is instead of jumping back.
+        time.sleep(0.05)
         axis.set_mode(previous_mode)
 
 
