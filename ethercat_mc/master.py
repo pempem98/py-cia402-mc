@@ -268,6 +268,11 @@ class EtherCATMaster:
                 try:
                     s.sdo_read(0x6041, 0)
                     ok += 1
+                except pysoem.Emergency as e:
+                    # A queued EMCY message (e.g. an old fault on EPOS4) came
+                    # back instead of the SDO reply: the drive did answer.
+                    ok += 1
+                    log.info("Slave %d emergency: error 0x%04X", i, e.error_code)
                 except Exception:  # noqa: BLE001 - counting failures is the point
                     pass
             results.append((i, ok, reads))
@@ -403,6 +408,19 @@ class EtherCATMaster:
         to be reconfigured.
         """
         slave = self.master.slaves[index]
+        # The working counter drops while the slave is outside OP; that is
+        # the point of this procedure, not a bus fault, so pause monitoring.
+        task = self.task
+        armed = task is not None and task._wkc_armed
+        if task is not None:
+            task._wkc_armed = False
+        try:
+            return self._cycle_slave_to_op(index, slave, attempts)
+        finally:
+            if armed:
+                task.arm_wkc_check()
+
+    def _cycle_slave_to_op(self, index: int, slave, attempts: int) -> bool:
         for attempt in range(1, attempts + 1):
             for want in (pysoem.PREOP_STATE, pysoem.SAFEOP_STATE, pysoem.OP_STATE):
                 slave.state = want
@@ -448,6 +466,13 @@ class EtherCATMaster:
                 for i, s in enumerate(self.master.slaves):
                     if s.state == pysoem.OP_STATE:
                         outside[i] = 0
+                        continue
+                    if s.state & 0x0F == pysoem.NONE_STATE:
+                        # 0x00 is not an AL state: the status read itself got
+                        # no answer. Acting on it (as this loop once did) sent
+                        # a healthy EPOS4 to PRE-OP. Report it, change nothing.
+                        log.warning("Slave %d (%s): AL state read got no reply",
+                                    i, s.name)
                         continue
                     outside[i] += 1
                     self.op_drops[i] += 1
