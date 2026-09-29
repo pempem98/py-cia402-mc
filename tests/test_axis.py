@@ -452,3 +452,29 @@ class TestDriveLimitWrites:
                          limits=LimitConfig(min_deg=-180.0, max_deg=180.0))
         MaxonDriver(cfg).write_position_limits(slave)
         assert not [w for w in slave.sdo_writes if w[0] == 0x607D]
+
+
+class TestHejFixes:
+    def test_velocity_is_estimated_when_not_mapped(self):
+        from ethercat_mc.drivers.maxon import MaxonDriver
+
+        cfg = AxisConfig(name="h", slave_position=0, counts_per_rev=1_296_000)
+        d = MaxonDriver(cfg)
+        slave = FakeSlave()
+        axis = Axis(cfg, slave, d.rx_pdo(), d.tx_pdo())
+        for i in range(300):  # 10 deg/s = 36000 counts/s at 3600 counts/deg
+            slave.input = d.tx_pdo().pack({
+                "statusword": 0x0027, "position_actual": int(i * 36000 * DT)})
+            axis.on_cycle(DT)
+        assert axis.state.velocity_deg_s == pytest.approx(10.0, rel=0.02)
+
+    def test_position_tolerance_is_configurable(self):
+        slave = FakeSlave(follows_target=False)
+        axis, slave = make_axis(slave=slave, max_following_error_deg=1000.0)
+        axis.request_enable()
+        run_cycles(axis, slave, 10)
+        axis.move_to(0.2)             # drive stays at 0: 0.2 deg short
+        run_cycles(axis, slave, 2000)
+        assert not axis.at_target     # default 0.05 deg
+        axis.cfg.position_tolerance_deg = 0.3
+        assert axis.at_target

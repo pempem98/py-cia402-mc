@@ -321,7 +321,9 @@ class Axis:
         """True when the profile is finished and the drive is within tolerance."""
         if self.mode is not c.Mode.CSP:
             return bool(self.state.statusword & c.SW_TARGET_REACHED)
-        tolerance = max(1.0, abs(self.cfg.deg_to_counts_delta(0.05)))
+        tolerance = max(
+            1.0, abs(self.cfg.deg_to_counts_delta(self.cfg.position_tolerance_deg))
+        )
         return (
             self.profile.done
             and abs(self.state.position_counts - self.profile.goal) <= tolerance
@@ -363,6 +365,27 @@ class Axis:
             self._outputs["target_position"] - st.position_counts
         )
 
+    def _estimate_velocity(self, dt: float) -> None:
+        """Differentiate position when the drive does not report velocity.
+
+        Without this an axis whose TxPDO lacks 0x606C (the Maxon layout) always
+        shows 0 deg/s, which reads as "not moving" while it is. A light
+        low-pass keeps count quantisation from dominating the display.
+        """
+        if self.tx_pdo.has("velocity_actual") or dt <= 0.0:
+            return
+        pos = self.state.position_counts
+        previous = getattr(self, "_velocity_last_pos", None)
+        self._velocity_last_pos = pos
+        if previous is None:
+            return
+        raw = (pos - previous) / dt
+        est = getattr(self, "_velocity_est", 0.0)
+        est += 0.1 * (raw - est)
+        self._velocity_est = est
+        self.state.velocity_counts_s = int(round(est))
+        self.state.velocity_deg_s = self.cfg.counts_to_deg_delta(est)
+
     def write_outputs(self) -> None:
         """Encode `self._outputs` into this slave's process-data outputs."""
         self.slave.output = self.rx_pdo.pack(self._outputs)
@@ -370,6 +393,7 @@ class Axis:
     def on_cycle(self, dt: float) -> None:
         """Advance the axis by one cycle. Called from the cyclic thread."""
         self.read_inputs()
+        self._estimate_velocity(dt)
 
         if self._first_cycle and self.state.statusword:
             # The first valid statusword tells us where the axis really is.

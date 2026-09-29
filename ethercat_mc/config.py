@@ -83,6 +83,11 @@ class AxisConfig:
     #: Rated torque in mNm, used to convert per-mille torque to physical units.
     rated_torque_mnm: float = 0.0
 
+    #: How close the measured position must get to the goal for a CSP move to
+    #: count as arrived. Must exceed the drive's real steady-state error, or
+    #: moves time out although the axis is where it can get.
+    position_tolerance_deg: float = 0.05
+
     #: Optional explicit PDO layout; None means the driver's default.
     rx_pdo: list[dict] | None = None
     tx_pdo: list[dict] | None = None
@@ -209,6 +214,7 @@ def _axis_from(d: dict) -> AxisConfig:
         limits=_limits_from(d.get("limits", {})),
         homing=_homing_from(d.get("homing", {})),
         rated_torque_mnm=float(d.get("rated_torque_mnm", 0.0)),
+        position_tolerance_deg=float(d.get("position_tolerance_deg", 0.05)),
         rx_pdo=d.get("rx_pdo"),
         tx_pdo=d.get("tx_pdo"),
         rx_pdo_index=_as_int(d.get("rx_pdo_index", 0x1600)),

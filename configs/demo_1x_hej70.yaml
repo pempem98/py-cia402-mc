@@ -44,6 +44,11 @@ axes:
 
     default_mode: csp
 
+    # Measured on the first run: moves settled 0.04-0.24 deg short of the
+    # goal (2-11 counts), so the 0.05 deg default timed out. If the error
+    # is larger than expected, re-tune the drive in maxon EPOS Studio.
+    position_tolerance_deg: 0.3
+
     limits:
       min_deg: -180.0
       max_deg: 180.0
