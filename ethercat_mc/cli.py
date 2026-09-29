@@ -147,6 +147,39 @@ def cmd_linktest(args) -> int:
         master.close()
 
 
+def cmd_odscan(args) -> int:
+    """Brute-force the object dictionary of one slave. Read-only."""
+    import pysoem
+
+    from . import odscan
+
+    adapter = choose_adapter(args.adapter)
+    master = pysoem.Master()
+    master.open(adapter)
+    try:
+        if master.config_init() <= args.slave:
+            print(f"slave {args.slave} not found")
+            return 1
+        s = master.slaves[args.slave]
+        start, stop = (int(x, 0) for x in args.range.split("-"))
+        print(f"Scanning slave {args.slave} ({s.name}) 0x{start:04X}-0x{stop:04X} ...")
+        t0 = time.time()
+        result = odscan.scan(
+            s, start, stop,
+            progress=lambda i, n: print(f"  0x{i:04X}  {n} objects so far"),
+        )
+        device = {"name": s.name, "vendor": f"0x{s.man:08X}",
+                  "product": f"0x{s.id:08X}", "rev": f"0x{s.rev:08X}"}
+        odscan.save(result, args.out, device)
+        print(f"{len(result['objects'])} objects in {time.time() - t0:.0f} s -> {args.out}")
+        if result["unreadable"]:
+            print(f"  no reply for {len(result['unreadable'])} indices: "
+                  f"{', '.join(result['unreadable'][:10])}")
+        return 0
+    finally:
+        master.close()
+
+
 def cmd_info(args) -> int:
     """Show what the configuration file means, without touching the bus."""
     cfg = load(args.config)
@@ -352,6 +385,13 @@ def main(argv: list[str] | None = None) -> int:
     p_link.add_argument("--adapter", help="adapter name (prompted if omitted)")
     p_link.add_argument("--reads", type=int, default=200)
     p_link.set_defaults(func=cmd_linktest)
+
+    p_od = sub.add_parser("odscan", help="dump a slave's object dictionary (read-only)")
+    p_od.add_argument("--adapter", help="adapter name (prompted if omitted)")
+    p_od.add_argument("--slave", type=int, default=0)
+    p_od.add_argument("--range", default="0x1000-0x6FFF")
+    p_od.add_argument("--out", required=True, help="output JSON file")
+    p_od.set_defaults(func=cmd_odscan)
 
     p_info = sub.add_parser("info", help="explain a config file, offline")
     p_info.add_argument("-c", "--config", required=True)
