@@ -1,4 +1,11 @@
-# Demo: one Maxon HEJ 70 joint (EPOS4 inside), free-standing, no load.
+# Demo: one Maxon HEJ 70-48-60 joint, free-standing, no load.
+# Datasheet: Datasheet_HEJ_70_48_60_rev1.0.pdf (preliminary, Sept 2025).
+#
+# KNOWN LIMITATION: the joint barely resists position error (measured ~1.6
+# permille torque per degree), so moves beyond a few degrees trip the
+# following-error limit. The datasheet describes an impedance controller with
+# "PDO-mappable control gains"; the objects for those gains are not documented
+# there. Ask robotics@maxongroup.com for the HEJ object dictionary.
 #
 # Values below were read from the drive itself (SDO, 2026-09-29):
 #   vendor 0x000000FB, product 0x8A020045, rev 0x01610110, serial 704643205
@@ -27,16 +34,10 @@ axes:
     vendor_id: 0x000000FB       # Maxon, confirmed on the bus
     product_code: 0x8A020045    # EPOS4 in the HEJ 70
 
-    # Position values come from the main sensor, the 14-bit SSI absolute
-    # encoder (16384 inc/rev), not from the motor encoder (20480 inc/rev).
-    # They are therefore OUTPUT-shaft counts: the 18:1 gear is already inside
-    # them, so gear_ratio stays 1.0 here. The driver reads 18:1 from 0x3003 on
-    # its own to cap motor speed.
-    #
-    # VERIFY with the stage-1 2 deg move. If the output turns only ~0.1 deg
-    # instead of 2, the main sensor is on the motor side after all: keep
-    # counts_per_rev: 16384 and set gear_ratio: 18.0. This value was chosen
-    # so that a wrong guess makes motion 18x SMALLER, never 18x larger.
+    # Confirmed by the datasheet (HEJ 70-48-60 rev 1.0): the 14-bit absolute
+    # joint sensor "measures the absolute output position (after the gear)",
+    # so these are OUTPUT-shaft counts and gear_ratio stays 1.0. The 18:1
+    # gear in 0x3003 is already inside them.
     counts_per_rev: 16384
     gear_ratio: 1.0
     direction: 1
@@ -44,10 +45,10 @@ axes:
 
     default_mode: csp
 
-    # Measured on the first run: moves settled 0.04-0.24 deg short of the
-    # goal (2-11 counts), so the 0.05 deg default timed out. If the error
-    # is larger than expected, re-tune the drive in maxon EPOS Studio.
-    position_tolerance_deg: 0.3
+    # The datasheet gives 0.5 deg average mechanical backlash, and moves were
+    # measured settling 0.04-0.31 deg from the goal, so 0.05 deg can never be
+    # reached. Lower this only with a low-backlash HEJ variant.
+    position_tolerance_deg: 0.5
 
     limits:
       min_deg: -180.0
