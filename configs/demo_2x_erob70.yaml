@@ -1,0 +1,108 @@
+# Demo: two eRob70 joints, free-standing, no load attached.
+#
+# Both motors sit on the bench with their output shafts free. Because nothing
+# is mounted, the software limits can be wide (+/-180 deg) and a wrong
+# direction sign costs nothing. Tighten both before attaching any load.
+#
+# Bring-up order (see README):
+#   python -m ethercat_mc.cli scan --adapter "\Device\NPF_{...}"
+#   python -m ethercat_mc.cli info -c configs/demo_2x_erob70.yaml
+#   python -m ethercat_mc.cli run  -c configs/demo_2x_erob70.yaml
+#
+# Cable order decides slave_position: the first eRob the cable reaches from
+# the PC is 0, the one daisy-chained after it is 1. `scan` prints the order
+# actually on the bus - trust that, not the label on the motor.
+
+bus:
+  # Leave null to be prompted. Once `scan` has confirmed which adapter the
+  # drives answer on, paste its \Device\NPF_{...} name here to skip the prompt.
+  # On this machine the EtherCAT port is the TwinCAT-Intel PCI adapter.
+  adapter: null
+
+  cycle_time_s: 0.002      # 2 ms. Raise to 0.004 if `s` reports high jitter.
+  use_dc: false            # Two axes at 2 ms do not need DC; see README.
+  pdo_timeout_us: 2000
+  max_wkc_errors: 50
+
+axes:
+  - name: joint1
+    driver: erob
+    slave_position: 0      # first drive on the cable
+
+    # Fill these in from `scan` output once confirmed. Pinning them turns a
+    # swapped cable into a startup error instead of the wrong joint moving.
+    vendor_id: null
+    product_code: null
+
+    # eRob reads a 19-bit absolute encoder on the OUTPUT shaft, so the
+    # harmonic drive is already accounted for and gear_ratio stays 1.0.
+    #
+    # VERIFY 524288 (2^19) against the eRob70 manual before the first move.
+    # If it is wrong, every angle is wrong by the same factor: commanding
+    # 10 deg would turn the joint 10 * (real / 524288) degrees.
+    # `info` prints the resulting resolution - check it reads ~2.47 arcsec.
+    counts_per_rev: 524288
+    gear_ratio: 1.0
+
+    # Flip to -1 if positive degrees turn the joint the wrong way. Check this
+    # at 5 deg/s with a 5 deg move before trusting anything larger.
+    direction: 1
+    zero_offset_counts: 0
+
+    default_mode: csp
+
+    limits:
+      # Wide, because nothing is attached. Narrow these the moment a load or
+      # a linkage goes on.
+      min_deg: -180.0
+      max_deg: 180.0
+
+      # Ceiling for the demo. The profile starts slower than this (see the
+      # `v` command); raise toward the ceiling once direction is confirmed.
+      max_velocity_deg_s: 30.0
+      max_acceleration_deg_s2: 60.0
+
+      # A single command may not ask for more than a half turn. This is a
+      # typo guard: "joint1 900" is rejected rather than spun nine times.
+      max_step_deg: 180.0
+
+      # Trips if the drive falls this far behind the commanded position -
+      # the signature of a jammed joint or a wrong counts_per_rev.
+      max_following_error_deg: 5.0
+      max_torque_permille: 300
+
+    homing:
+      # Off: an absolute encoder already knows where it is, and with nothing
+      # attached there is no mechanical zero worth searching for. Use the
+      # `zero` shell command to make the current position 0 deg instead.
+      enabled: false
+      method: 35
+      timeout_s: 30.0
+
+  - name: joint2
+    driver: erob
+    slave_position: 1      # second drive on the cable
+
+    vendor_id: null
+    product_code: null
+
+    counts_per_rev: 524288
+    gear_ratio: 1.0
+    direction: 1
+    zero_offset_counts: 0
+
+    default_mode: csp
+
+    limits:
+      min_deg: -180.0
+      max_deg: 180.0
+      max_velocity_deg_s: 30.0
+      max_acceleration_deg_s2: 60.0
+      max_step_deg: 180.0
+      max_following_error_deg: 5.0
+      max_torque_permille: 300
+
+    homing:
+      enabled: false
+      method: 35
+      timeout_s: 30.0

@@ -1,0 +1,96 @@
+# Mixed eRob + Maxon HEJ bus.
+#
+# `slave_position` is the physical order on the cable, counting from the
+# master: the first drive the cable reaches is 0. Run `python -m ethercat_mc.cli
+# scan` to see what is actually on the bus before trusting this file.
+#
+# Angles are degrees at the OUTPUT shaft, in application coordinates. The
+# conversion to encoder counts uses counts_per_rev, gear_ratio, direction and
+# zero_offset_counts.
+
+bus:
+  # Leave `adapter` unset to be prompted. Get the exact name from `scan`.
+  adapter: null
+  cycle_time_s: 0.002      # 2 ms. Raise to 0.004 if the loop cannot keep up.
+  use_dc: false            # Distributed clocks; see README before enabling.
+  pdo_timeout_us: 2000
+  max_wkc_errors: 50       # consecutive bad working counters before faulting
+
+axes:
+  # --- ZeroErr eRob ----------------------------------------------------
+  - name: joint1
+    driver: erob
+    slave_position: 0
+
+    # Pin these once `scan` has reported them, so a rewired bus is caught.
+    vendor_id: null
+    product_code: null
+
+    # eRob reads an absolute encoder on the output shaft, so the gearbox is
+    # already accounted for: gear_ratio stays 1.0. CHECK counts_per_rev
+    # against the manual for your model before moving anything.
+    counts_per_rev: 524288   # 2^19
+    gear_ratio: 1.0
+    direction: 1             # flip to -1 if positive degrees turn the wrong way
+    zero_offset_counts: 0
+
+    default_mode: csp
+
+    limits:
+      min_deg: -180.0
+      max_deg: 180.0
+      max_velocity_deg_s: 30.0
+      max_acceleration_deg_s2: 60.0
+      max_step_deg: 90.0            # guard against a mistyped command
+      max_following_error_deg: 5.0
+      max_torque_permille: 300
+
+    homing:
+      enabled: false
+      method: 35                    # current position becomes home, no motion
+      timeout_s: 30.0
+
+  # --- Maxon EPOS4 / IDX driving an HEJ joint --------------------------
+  - name: joint2
+    driver: maxon
+    slave_position: 1
+
+    vendor_id: 0x000000FB
+    product_code: null
+
+    # The Maxon encoder is on the MOTOR shaft, before the gearhead, so
+    # gear_ratio must be the real reduction. counts_per_rev is the encoder's
+    # counts per motor turn: 4x the line count for a quadrature encoder
+    # (e.g. 1024 lines -> 4096 counts).
+    counts_per_rev: 4096
+    gear_ratio: 100.0               # 100:1 HEJ gearhead
+    direction: 1
+    zero_offset_counts: 0
+
+    default_mode: csp
+    rated_torque_mnm: 0.0           # read from 0x6076 when left at 0
+
+    limits:
+      min_deg: -90.0
+      max_deg: 90.0
+      max_velocity_deg_s: 20.0
+      max_acceleration_deg_s2: 40.0
+      max_step_deg: 45.0
+      max_following_error_deg: 2.0
+      max_torque_permille: 250
+
+    homing:
+      enabled: false
+      method: 35
+      speed_search_deg_s: 5.0
+      speed_zero_deg_s: 1.0
+      acceleration_deg_s2: 10.0
+      timeout_s: 30.0
+
+    # Objects written during PRE-OP, before the PDO mapping takes effect.
+    # Use this for anything the driver does not cover.
+    startup_sdo: []
+      # - index: 0x6065           # following error window, counts
+      #   subindex: 0
+      #   type: u32
+      #   value: 10000
