@@ -1,0 +1,3 @@
+div.image img[src="DocAposs.png"]{ 
+    width:100px; 
+}

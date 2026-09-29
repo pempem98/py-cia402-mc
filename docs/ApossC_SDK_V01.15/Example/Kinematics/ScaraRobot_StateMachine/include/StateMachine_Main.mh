@@ -1,0 +1,65 @@
+/*********************************************************************
+** State Machine Defines
+**
+** All defines which are needed for the configuration of the state
+** machine as well as the corresponding SmEvent signals are declared
+** in this file.
+**
+*********************************************************************/
+
+/*********************************************************************
+** State Machine ID / Private Data Array Indices
+*********************************************************************/
+#define SMID_ROBOT        	1     // ID number of the TG test state machine.
+
+#define ROBOT_DATA        	2    // Length of private data for the state machine.
+
+// Indices for delta data:
+#define HOMEDONE            0
+#define NXTFIXPOINT         1
+
+// This declaration allows the state machine name to be referenced
+// in the state definitions (which is faster than using an ID number).
+SmMachine Delta;
+
+/*********************************************************************
+** State Machine Setup Parameters
+*********************************************************************/
+#pragma SmConfig { SM_RUN_DELAY | SM_RUN_DELDISABLE,    // Runtime flags.
+                   100,                                  // Event pool size.
+                    2,                                  // Maximum number of timers.
+                   50,                                  // Subscribe pool size.
+                   50,                                  // Parameter pool size.
+                    0,                                  // Position pool size.
+                   50 }                                 // System signal pool size.
+
+/*********************************************************************
+** Event Definitions
+*********************************************************************/
+
+SmEvent SIG_FIXPNT    { PFGAXIS, PFGTYPE, PFGFIXPNT }		// A new segment has started.
+SmEvent SIG_CYCLE     { PFGAXIS, PFGTYPE, PFGWRAP }			// The path has cycled.
+SmEvent SIG_PATHSTOP  { PFGAXIS, PFGTYPE, PFGSTOPTYPE}		// stopped at a Stop point
+SmEvent SIG_STDONE    { PFGAXIS, PFGTYPE  }					// Start path is complete.
+SmEvent SIG_MOVEDONE  { PFGAXIS, PFGTYPE, PFGMOVEDONETYPE }	// PathMove finished
+
+SmEvent SIG_UPDATE          { CLOCK }						// Cyclic HMI update
+
+SmEvent SIG_CMD_MOTOFF      { SDONDX, VALUE }				// Command motor off
+SmEvent SIG_CMD_MOTON       { SDONDX, VALUE }				// Command motor on
+SmEvent SIG_CMD_HOME        { SDONDX, VALUE }				// Command home
+SmEvent SIG_CMD_STOP        { SDONDX, VALUE }				// Command stop
+SmEvent SIG_CMD_UPDATE_VEL  { SDONDX, VALUE }				// Command velocity change
+
+SmEvent SIG_CMD_PATHSTART   { SDONDX, VALUE }				// Command pathstart
+SmEvent SIG_CMD_PATHNEXT    { SDONDX, VALUE }				// Command pathnext
+SmEvent SIG_CMD_PATHCONT    { SDONDX, VALUE }				// Command pathcontinous
+
+SmEvent SIG_CMD_MACHINE_MOVE    { SDONDX, VALUE }			// Command machine cord. move
+SmEvent SIG_CMD_WORK_MOVE 		{ SDONDX, VALUE }			// Command work cord. move
+
+SmEvent SIG_CMD_TEST_1 		{ SDONDX, VALUE }				// Command dummy event to add a test
+SmEvent SIG_CMD_TEST_2 		{ SDONDX, VALUE }				// Command dummy event to add a test
+SmEvent SIG_CMD_TEST_3 		{ SDONDX, VALUE }				// Command dummy event to add a test
+SmEvent SIG_CMD_TEST_4 		{ SDONDX, VALUE }				// Command dummy event to add a test
+SmEvent SIG_CMD_TEST_5 		{ SDONDX, VALUE }				// Command dummy event to add a test

@@ -1,0 +1,510 @@
+header SW 7.5.1 HW XS3 OPT -E PRJ <<<<>>>> CAN 1 11
+sdobegin 0x2100 0 135  // Aposs Array 0
+999001001             // ArrayTypeID:  Path Curve
+2                     // Version:  Version
+0                     // Flags:  Flags
+2                     // PathID:  Path ID
+1953260868            // PathNameA:  4 ascii characters
+1869108065            // PathNameB:  4 ascii characters
+119                   // PathNameC:  4 ascii characters
+0                     // PathNameD:  4 ascii characters
+3                     // AxisCnt:  Number of axes
+3                     // SpatialCnt:  Number of spatial axes
+1                     // SpeedNum:  Speed numerator
+1                     // SpeedDen:  Speed denominator
+0                     // MaxDev:  Maximum deviation
+16                    // MapIndex:  Index of curve map
+2                     // PathCnt:  Number of path curves
+18                    // CurveIndex0:  Index of curve
+92                    // CurveIndex1:  Index of curve
+19                    // Offset0:  Offset to first fixed point
+11                    // FixCnt0:  Fixed point count
+8                     // Flags0:  Flags
+1801677136            // CurveNameA0:  4 ascii characters
+1348759105            // CurveNameB0:  4 ascii characters
+1701011820            // CurveNameC0:  4 ascii characters
+0                     // CurveNameD0:  4 ascii characters
+0                     // StartVelNum0_1:  Start velocity numerator
+1                     // StartVelDen0_1:  Start velocity denominator
+0                     // StopVelNum0_1:  Stop velocity numerator
+1                     // StopVelDen0_1:  Stop velocity denominator
+0                     // StartVelNum0_2:  Start velocity numerator
+1                     // StartVelDen0_2:  Start velocity denominator
+0                     // StopVelNum0_2:  Stop velocity numerator
+1                     // StopVelDen0_2:  Stop velocity denominator
+0                     // StartVelNum0_3:  Start velocity numerator
+1                     // StartVelDen0_3:  Start velocity denominator
+0                     // StopVelNum0_3:  Stop velocity numerator
+1                     // StopVelDen0_3:  Stop velocity denominator
+0                     // FixDist0_1:  Fixed point distance
+4                     // FixType0_1:  Fixed point type
+0                     // FixPoint0_1_1:  Fixed point coordinate
+-200                  // FixPoint0_1_2:  Fixed point coordinate
+-15                   // FixPoint0_1_3:  Fixed point coordinate
+85                    // FixDist0_2:  Fixed point distance
+196                   // FixType0_2:  Fixed point type
+0                     // FixPoint0_2_1:  Fixed point coordinate
+-200                  // FixPoint0_2_2:  Fixed point coordinate
+-100                  // FixPoint0_2_3:  Fixed point coordinate
+170                   // FixDist0_3:  Fixed point distance
+1                     // FixType0_3:  Fixed point type
+0                     // FixPoint0_3_1:  Fixed point coordinate
+-200                  // FixPoint0_3_2:  Fixed point coordinate
+-15                   // FixPoint0_3_3:  Fixed point coordinate
+343                   // FixDist0_4:  Fixed point distance
+1                     // FixType0_4:  Fixed point type
+0                     // FixPoint0_4_1:  Fixed point coordinate
+-100                  // FixPoint0_4_2:  Fixed point coordinate
+125                   // FixPoint0_4_3:  Fixed point coordinate
+543                   // FixDist0_5:  Fixed point distance
+1                     // FixType0_5:  Fixed point type
+0                     // FixPoint0_5_1:  Fixed point coordinate
+100                   // FixPoint0_5_2:  Fixed point coordinate
+125                   // FixPoint0_5_3:  Fixed point coordinate
+716                   // FixDist0_6:  Fixed point distance
+4                     // FixType0_6:  Fixed point type
+0                     // FixPoint0_6_1:  Fixed point coordinate
+200                   // FixPoint0_6_2:  Fixed point coordinate
+-15                   // FixPoint0_6_3:  Fixed point coordinate
+801                   // FixDist0_7:  Fixed point distance
+196                   // FixType0_7:  Fixed point type
+0                     // FixPoint0_7_1:  Fixed point coordinate
+200                   // FixPoint0_7_2:  Fixed point coordinate
+-100                  // FixPoint0_7_3:  Fixed point coordinate
+886                   // FixDist0_8:  Fixed point distance
+1                     // FixType0_8:  Fixed point type
+0                     // FixPoint0_8_1:  Fixed point coordinate
+200                   // FixPoint0_8_2:  Fixed point coordinate
+-15                   // FixPoint0_8_3:  Fixed point coordinate
+1059                  // FixDist0_9:  Fixed point distance
+1                     // FixType0_9:  Fixed point type
+0                     // FixPoint0_9_1:  Fixed point coordinate
+100                   // FixPoint0_9_2:  Fixed point coordinate
+125                   // FixPoint0_9_3:  Fixed point coordinate
+1259                  // FixDist0_10:  Fixed point distance
+1                     // FixType0_10:  Fixed point type
+0                     // FixPoint0_10_1:  Fixed point coordinate
+-100                  // FixPoint0_10_2:  Fixed point coordinate
+125                   // FixPoint0_10_3:  Fixed point coordinate
+1431                  // FixDist0_11:  Fixed point distance
+1                     // FixType0_11:  Fixed point type
+0                     // FixPoint0_11_1:  Fixed point coordinate
+-200                  // FixPoint0_11_2:  Fixed point coordinate
+-14                   // FixPoint0_11_3:  Fixed point coordinate
+19                    // Offset1:  Offset to first fixed point
+5                     // FixCnt1:  Fixed point count
+8                     // Flags1:  Flags
+1818458435            // CurveNameA1:  4 ascii characters
+101                   // CurveNameB1:  4 ascii characters
+0                     // CurveNameC1:  4 ascii characters
+0                     // CurveNameD1:  4 ascii characters
+0                     // StartVelNum1_1:  Start velocity numerator
+1                     // StartVelDen1_1:  Start velocity denominator
+0                     // StopVelNum1_1:  Stop velocity numerator
+1                     // StopVelDen1_1:  Stop velocity denominator
+0                     // StartVelNum1_2:  Start velocity numerator
+1                     // StartVelDen1_2:  Start velocity denominator
+0                     // StopVelNum1_2:  Stop velocity numerator
+1                     // StopVelDen1_2:  Stop velocity denominator
+0                     // StartVelNum1_3:  Start velocity numerator
+1                     // StartVelDen1_3:  Start velocity denominator
+0                     // StopVelNum1_3:  Stop velocity numerator
+1                     // StopVelDen1_3:  Stop velocity denominator
+0                     // FixDist1_1:  Fixed point distance
+1                     // FixType1_1:  Fixed point type
+0                     // FixPoint1_1_1:  Fixed point coordinate
+0                     // FixPoint1_1_2:  Fixed point coordinate
+0                     // FixPoint1_1_3:  Fixed point coordinate
+71                    // FixDist1_2:  Fixed point distance
+1                     // FixType1_2:  Fixed point type
+50                    // FixPoint1_2_1:  Fixed point coordinate
+50                    // FixPoint1_2_2:  Fixed point coordinate
+0                     // FixPoint1_2_3:  Fixed point coordinate
+142                   // FixDist1_3:  Fixed point distance
+1                     // FixType1_3:  Fixed point type
+0                     // FixPoint1_3_1:  Fixed point coordinate
+100                   // FixPoint1_3_2:  Fixed point coordinate
+0                     // FixPoint1_3_3:  Fixed point coordinate
+213                   // FixDist1_4:  Fixed point distance
+1                     // FixType1_4:  Fixed point type
+-50                   // FixPoint1_4_1:  Fixed point coordinate
+50                    // FixPoint1_4_2:  Fixed point coordinate
+0                     // FixPoint1_4_3:  Fixed point coordinate
+284                   // FixDist1_5:  Fixed point distance
+1                     // FixType1_5:  Fixed point type
+0                     // FixPoint1_5_1:  Fixed point coordinate
+0                     // FixPoint1_5_2:  Fixed point coordinate
+0                     // FixPoint1_5_3:  Fixed point coordinate
+sdoend
+sdobegin -7 -327678 28  // Configuration Editor Path Display 0xFFFB0002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 1         // Snap on Grid
+sdoval 11 1         // Continuous Calc
+sdoval 12 1         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -7 2 28    // Configuration Editor Path Display 0x2
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 1         // Snap on Grid
+sdoval 11 1         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 2         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 0         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 2 28    // Configuration Editor Path/CAM Display 0x2
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 67108866 28  // Configuration Editor Path/CAM Display 0x4000002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 134217730 28  // Configuration Editor Path/CAM Display 0x8000002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -3 2 45    // Configuration Editor Path Points 2
+44 4 0 -200 -15 196 0 -200 -100 1
+0 -200 -15 1 0 -100 125 1 0 100
+125 4 0 200 -15 196 0 200 -100 1
+0 200 -15 1 0 100 125 1 0 -100
+125 1 0 -200 -14 
+sdoend
+sdobegin -9 2 13    // Configuration Editor Path Direction 2
+sdoval 0 12         // Largest Index
+sdoval 1 0
+sdoval 2 1
+sdoval 3 0
+sdoval 4 1
+sdoval 5 0
+sdoval 6 1
+sdoval 7 0
+sdoval 8 1
+sdoval 9 0
+sdoval 10 1
+sdoval 11 0
+sdoval 12 1
+sdoend
+sdobegin -7 65538 28  // Configuration Editor Path Display 0x10002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 1         // Snap on Grid
+sdoval 11 1         // Continuous Calc
+sdoval 12 1         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 65538 28  // Configuration Editor Path/CAM Display 0x10002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 67174402 28  // Configuration Editor Path/CAM Display 0x4010002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -8 134283266 28  // Configuration Editor Path/CAM Display 0x8010002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 0         // Snap on Grid
+sdoval 11 0         // Continuous Calc
+sdoval 12 0         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -3 65538 21  // Configuration Editor Path Points 65538
+20 1 0 0 0 1 50 50 0 1
+0 100 0 1 -50 50 0 1 0 0
+0 
+sdoend
+sdobegin -9 65538 13  // Configuration Editor Path Direction 65538
+sdoval 0 12         // Largest Index
+sdoval 1 0
+sdoval 2 1
+sdoval 3 0
+sdoval 4 1
+sdoval 5 0
+sdoval 6 1
+sdoval 7 0
+sdoval 8 1
+sdoval 9 0
+sdoval 10 1
+sdoval 11 0
+sdoval 12 1
+sdoend
+sdobegin -7 -196606 28  // Configuration Editor Path Display 0xFFFD0002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 1         // Snap on Grid
+sdoval 11 1         // Continuous Calc
+sdoval 12 1         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend
+sdobegin -7 -65534 28  // Configuration Editor Path Display 0xFFFF0002
+sdoval 0 0          // Velocity
+sdoval 1 0          // Velocity Limit
+sdoval 2 0          // Acceleration
+sdoval 3 0          // Acceleration Limit
+sdoval 4 0          // Jerk
+sdoval 5 0          // Slave Stop
+sdoval 6 0          // Start Stop
+sdoval 7 0          // Master Mark
+sdoval 8 0          // Slave Mark
+sdoval 9 0          // Correction
+sdoval 10 1         // Snap on Grid
+sdoval 11 1         // Continuous Calc
+sdoval 12 1         // Auto Scale
+sdoval 13 0         // Forward
+sdoval 14 0         // Backward
+sdoval 15 4         // Closeness
+sdoval 16 0         // Path Orientation
+sdoval 17 1         // Mouse Tracking
+sdoval 18 1         // View
+sdoval 19 0         // Axis (0-based)
+sdoval 20 1         // Double Click
+sdoval 21 0
+sdoval 22 1072693248
+sdoval 23 0
+sdoval 24 1079574528
+sdoval 25 10
+sdoval 26 0
+sdoval 27 1
+sdoend

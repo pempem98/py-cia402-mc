@@ -1,0 +1,25 @@
+/*********************************************************************
+** Machine-specific Definitions
+*
+* In this file all robot specific kinematics parameters are defined.
+*
+*********************************************************************/
+
+// Axis module number
+#define AXIS1      0       		// Axis number of "Axis 1".
+#define AXIS2      1      		// Axis number of "Axis 2".
+#define AXIS3      2       		// Axis number of "Axis 3".
+
+// Kinematic definition
+#define SCARA_PRIMARY_ARM		300		// Definition of length A [mm]
+#define SCARA_SECONDARY_ARM		300		// Definition of length B [mm]
+#define SCARA_ORIENT			1		// Use a "Left" orientation.
+
+#define WCORD_ORIGIN_OFFSET_X	-200		// Machine coordinate X offset from home position (machine)[mm]
+#define WCORD_ORIGIN_OFFSET_Y	100		// Machine coordinate Y offset from home position (machine)[mm]
+#define WCORD_ORIGIN_OFFSET_Z	0	// Machine coordinate Z offset from home position (machine)[mm]
+#define WCORD_ROT_XY			-90		// Machine coordinate rotatio XY → work coordinate [°]
+#define WCORD_SCALE				1		// Scaling machine coordinate → work coordinate [F]
+
+
+

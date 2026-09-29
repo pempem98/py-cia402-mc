@@ -1,0 +1,49 @@
+/**
+*	@brief		Program for controlling a single ECi40 motor from Maxon.
+*	@detail		This program controls an ECi40 motor from maxon. An incremental encoder with a resolution of 1024 qc is used. \n
+*				The purpose of this program is to show how to set up a motor, an encoder and the axis using the SDK. \n
+*				For this purpose the following must be configured: \n
+*				- Encoder \n
+*				- Amplifier \n
+*				- ControllerMode and controller (position, velocity, current) \n
+*				- Axis parameters (user units, direction, limits) \n
+*
+*				It is recommended to implement the setup of a motor outside the main program in an external *.mh file.
+*
+*	$Revision: 245 $
+*
+*/
+
+#define C_MOTOR_ENCRES 			5000*256 				// Resolution of the encoder for position feed back in increments (quadcounts)
+#define C_MOTOR_ENC_LATCHTYPE 	0						// Defines the latch type: Digital input
+#define C_MOTOR_ENC_LATCHPARAM 	0						// Latch on digital input 1
+#define C_MOTOR_ENC_LATCHSLOPE 	HWLATCH_SLOPE_RISING	// Defines the slope of the trigger signal (Default 1)
+
+#define C_MOTOR_CONTROLMODE		HWAMP_MODE_POS_CUR	// Define control typ
+#define C_MOTOR_POLEPAIRS		1						// Number of pole pairs
+#define C_MOTOR_MAXCUR			25000					// Maximal current allowed in mA
+#define C_MOTOR_MAX_RPM			1000					// Maximum velocity in RPM
+#define C_MOTOR_CURKPROP		400						// Proportional factor of current controller
+#define C_MOTOR_CURKINT			80						// Integral factor of current controller
+#define C_MOTOR_CURKILIM		32767					// Integral limit of current controller
+#define C_MOTOR_VELKPROP		20000					// Proportional factor of velocity controller
+#define C_MOTOR_VELKINT			0						// Integral factor of velocity controller
+#define C_MOTOR_VELKILIM		32767					// Integral limit of velocity controller
+
+#define C_MOTOR_POSERR			10000					// Maximum tolerated position error
+#define C_MOTOR_VELRES			1000					// Velocity resolution, Scaling used for the velocity and acceleration/deceleration commands
+#define C_MOTOR_RAMPTYPE		RAMPTYPE_TRAPEZ			// Defines the ramptype
+#define C_MOTOR_RAMPMIN			1000					// Maximum acceleration
+#define C_MOTOR_JERKMIN			1000					// Minimum time (ms) required before reaching the maximum acceleration
+
+#define	C_MOTOR_KPROP			100						// Proportional value for PID position control loop
+#define	C_MOTOR_KINT			15						// Integral value for PID position control loop
+#define	C_MOTOR_KDER			400						// Derivative value for PID position control loop
+#define	C_MOTOR_KILIM			2000					// Limit value for the integral sum of the PID position control loop
+#define	C_MOTOR_KILIMTIME		0						// Time used to increase or decrease the integral limit
+#define	C_MOTOR_BANDWIDTH		2000					// Bandwidth within which the PID filter is active. 1000 equals to 100% velocity setpoint
+#define	C_MOTOR_FFVEL			0						// Velocity Feed forward
+#define	C_MOTOR_KFFAC			0						// Acceleration Feed forward
+#define	C_MOTOR_KFFDEC			0						// Deceleration Feed Forward
+
+void SetupMotor(long axis, long direction);

@@ -1,0 +1,200 @@
+[VARIABLES]
+#include "include\UserInterface.mh"
+
+WindowWidth    = 1070
+WindowHeight   = 660
+WindowTitle    = Kinematics Test
+WindowFlags    = 0x0022
+OpFlags        = 0x0001
+Pollinterval   = 100             // ms interval for polling
+
+// USB Connection
+$Ctrl = Controller,0x0001,1,(1,USB,6,50,0x0,921600,1)
+
+$Cmd   = SDO,0x0000,Ctrl,0x2201,USR_COMMAND,-,-,0
+$Arrno = SDO,0x0004,Ctrl,0x2201,USR_ARRNO,-,-,0
+$Pthno = SDO,0x0004,Ctrl,0x2201,USR_PATHNO,-,-,0
+$Scale = SDO,0x0004,Ctrl,0x2201,USR_SCALE,-,-,0
+$PVel  = SDO,0x0004,Ctrl,0x2201,USR_MOVEVEL,-,-,0
+$PAcc  = SDO,0x0004,Ctrl,0x2201,USR_MOVEACC,-,-,0
+$PJrk  = SDO,0x0004,Ctrl,0x2201,USR_MOVEJERK,-,-,0
+$FVel  = SDO,0x0004,Ctrl,0x2201,USR_PATHVEL,-,-,0
+$FAcc  = SDO,0x0004,Ctrl,0x2201,USR_PATHACC,-,-,0
+$FJrk  = SDO,0x0004,Ctrl,0x2201,USR_PATHJERK,-,-,0
+
+$PStX   = SDO,0x0004,Ctrl,0x2201,USR_WORKPOSX,-,-,0
+$PStY   = SDO,0x0004,Ctrl,0x2201,USR_WORKPOSY,-,-,0
+$PStZ   = SDO,0x0004,Ctrl,0x2201,USR_WORKPOSZ,-,-,0
+$PStTyp = SDO,0x0004,Ctrl,0x2201,USR_PATHSTTYPE,-,-,0
+
+$MachX = SDO,0x0004,Ctrl,0x2201,USR_MACHPOSX,-,-,0
+$MachY = SDO,0x0004,Ctrl,0x2201,USR_MACHPOSY,-,-,0
+$MachZ = SDO,0x0004,Ctrl,0x2201,USR_MACHPOSZ,-,-,0
+
+$PScale   = SDO,0x0004,Ctrl,0x2201,USR_PATHSCALE,-,-,0
+
+$DspWX  = SDO,0x0001,Ctrl,0x2201,USR_DSP_WRKPOSX,-,-,0
+$DspWY  = SDO,0x0001,Ctrl,0x2201,USR_DSP_WRKPOSY,-,-,0
+$DspWZ  = SDO,0x0001,Ctrl,0x2201,USR_DSP_WRKPOSZ,-,-,0
+$DspMX  = SDO,0x0001,Ctrl,0x2201,USR_DSP_MCHPOSX,-,-,0
+$DspMY  = SDO,0x0001,Ctrl,0x2201,USR_DSP_MCHPOSY,-,-,0
+$DspMZ  = SDO,0x0001,Ctrl,0x2201,USR_DSP_MCHPOSZ,-,-,0
+$DspTi  = SDO,0x0001,Ctrl,0x2201,USR_DSP_MOVTIME,-,-,0
+$DspWr  = SDO,0x0001,Ctrl,0x2500,130,-,-,0
+
+$DspSmS= SDO,0x0001,Ctrl,0x2201,USR_DSP_STATUS,-,-,0
+
+$SmStateText = Table,0x0000,("*MotorsOff",1,\
+                             "*MotorsOn",10,\
+                             "*Homing",20,\
+                             "*Running",30,\
+							 "*Running->PenDown",32,\
+							 "*Running->PenUp",34,\
+							 "*Running->WorkMove",36,\
+							 "*Running->MachMove",38,\
+							 "*Running->OsciOn",40,\
+							 "*Running->OsciOff",42,\
+							 "*Running->UpdateVel",44,\
+							 "*Running->Erasing",46,\
+							 "*Running->Drawing",48,\
+							 "*Running->Show",50,\
+                             "*HandMode",80)
+
+// Font Definition --------------------------------------------------------------------------------
+$Font  = Font,0x0000,(-11,0,0,0,700,0,0,0,0,0,0,0,0,"MS Shell Dlg 2")
+$FSym   = Font,0x0000,(-20,0,0,0,400,0,0,0,0,0,0,0,0,"MS Shell Dlg 2")
+
+$Zero  = Constant,0x0,0
+$ArrNum = Constant,0x0,0
+
+$CtrlBox = Box,"*Controller",-,20,15,570,70,0x0000,-
+$CtrlStr = Text,"Controller:",CtrlBox,25,30,80,40,-1,-,0x0,Black,-
+$CtrlNam = Message,Controller,CtrlStr,95,-2,130,20,0,16,0x0002,-,{Ctrl,Black}
+$Select  = Button,Controller,"*Select Controller",CtrlNam,190,-3,170,30,0x0,0,Black,DlgGray,-,{Ctrl}
+$StPoll  = Button,PollStart,"*Poll",Select,180,0,40,30,0x0,0,Black,DlgGray,-
+
+// Logo
+$Logo = Bitmap,"include\zub-Logo_gr.bmp",-,740,15,0x00,-
+
+// Kinematics box
+$Kinematics = Box,"*Kinematics",-,20,100,1040,550,0x0000,-
+
+
+// Display Box --------------------------------------------------------------------------------------
+$Display = Box,"*Actual Values",Kinematics,20,20,320,250,0x0,-
+
+$DspStatTxt    = Text,"Status     ",  Display,10, 25, 80,15,1,0,0x0,Black,-
+$DspPosWTxt    = Text,"Work Coord." ,  Display,100,55, 80,15,1,0,0x0,Black,-
+$DspPosMTxt    = Text,"Machine Coord." ,  Display,190,55, 80,15,1,0,0x0,Black,-
+$DspPosXTxt    = Text,"X Pos (mm) ",  Display,10, 85, 80,15,1,0,0x0,Black,-
+$DspPosYTxt    = Text,"Y Pos (mm) ",  Display,10,115, 80,15,1,0,0x0,Black,-
+$DspPosZTxt    = Text,"Z Pos (mm) ",  Display,10,145, 80,15,1,0,0x0,Black,-
+$DspTimeTxt    = Text,"Duration (ms) ",  Display,10, 175, 80,15,1,0,0x0,Black,-
+$DspWrapTxt    = Text,"Wrap ",        Display,10, 205, 80,15,1,0,0x0,Black,-
+$DspStatBit    = Bit,DspStatVal,140,0,20,20,0x0000,red,green,grey,DspSmS,0x01,-,0x01
+
+
+$DspStatVal    = Message,Lookup, Display,100,20,120,20,-1,0,0x0002,-,{SmStateText,DspSmS}     // Bob added this for the state machine state (using message box).
+$DspPosXVal    = Value,"*", Display,100, 80,0x0201,DspWX ,0,-,USER_FACTOR_SCALE,-
+$DspPosYVal    = Value,"*", Display,100,110,0x0201,DspWY ,0,-,USER_FACTOR_SCALE,-
+$DspPosZVal    = Value,"*", Display,100,140,0x0201,DspWZ ,0,-,USER_FACTOR_SCALE,-
+$DspTimeVal    = Value,"*", Display,100,170,0x0201,DspTi,0,-,  0,-
+$DspMPosXVal   = Value,"*", Display,190, 80,0x0201,DspMX ,0,-,USER_FACTOR_SCALE,-
+$DspMPosYVal   = Value,"*", Display,190,110,0x0201,DspMY ,0,-,USER_FACTOR_SCALE,-
+$DspMPosZVal   = Value,"*", Display,190,140,0x0201,DspMZ ,0,-,USER_FACTOR_SCALE,-
+$DspWrapVal    = Value,"*", Display,100,200,0x0201,DspWr ,0,-,0,-
+
+// Command Box --------------------------------------------------------------------------------------
+$CommandBox = Box,"*Machine Commands",Display,340,0,320,250,0x0,-
+
+$BMotoff    = Button,Set,"*MotOff" ,CommandBox,10,  20,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_MOTOFF,-}
+$BMoton     = Button,Set,"*MotOn"  ,CommandBox,10,  60,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_MOTON,-}
+$BStop     = Button,Set,"*Stop",CommandBox,80,  20,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_STOP,-}
+$BHome     = Button,Set,"*Home",CommandBox,80,  60,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_HOME,-}
+
+// PathData Box --------------------------------------------------------------------------------------
+$PathBox = Box,"*Path Data ",CommandBox,340,0,320,250,0x0,-
+
+$PathTopTxt  = Text,"Path Move",PathBox,90, 25, 85,15,1,0,0x0,Black,-
+$PathTopTxt  = Text,"Path Start",PathBox,190, 25, 85,15,1,0,0x0,Black,-
+
+$PathVelTxt  = Text,"PathVel(mm/s)",PathBox,10, 55, 85,15,1,0,0x0,Black,-
+$PathAccTxt  = Text,"PathAcc(mm/s²)",PathBox,10, 85, 85,15,1,0,0x0,Black,-
+$PathJrkTxt  = Text,"PathJrk(mm/s³)",PathBox,10,115, 85,15,1,0,0x0,Black,-
+
+$PathVelVal  = Value,"*", PathBox,100, 50,0x0204,PVel,0,-,0,-
+$PathAccVal  = Value,"*", PathBox,100, 80,0x0204,PAcc,0,-,0,-
+$PathJrkVal  = Value,"*", PathBox,100,110,0x0204,PJrk,0,-,0,-
+$FastVelVal  = Value,"*", PathBox,200, 50,0x0204,FVel,0,-,0,-
+$FastAccVal  = Value,"*", PathBox,200, 80,0x0204,FAcc,0,-,0,-
+$FastJerkVal = Value,"*", PathBox,200,110,0x0204,FJrk,0,-,0,-
+
+$BPathUpdV   = Button,Set,"*VelUpd",PathBox,10, 210 ,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_UPDATE_VEL,-}
+
+
+
+// Path Move  ------------------------------------------------------------------------------------------
+$PathMoveBox  = Box,"*Path Move",Display,0,260,320,250,0x0,-
+
+$PTopTxtX   = Text,"X", PathMoveBox,70, 35, 80,15,0,0,0x0,Black,-
+$PTopTxtY   = Text,"Y", PathMoveBox,150, 35, 80,15,0,0,0x0,Black,-
+$PTopTxtZ   = Text,"Z", PathMoveBox,230, 35, 80,15,0,0,0x0,Black,-
+
+$PStxTxt   = Text,"WPos (mm)", PathMoveBox,10, 55, 60,15,1,0,0x0,Black,-
+$PStxVal   = Value,"*", PathMoveBox,75, 50,0x0204,PStX,0,-,USER_FACTOR_SCALE,-
+$PStyVal   = Value,"*", PathMoveBox,155,50,0x0204,PStY,0,-,USER_FACTOR_SCALE,-
+$PStzVal   = Value,"*", PathMoveBox,235,50,0x0204,PStZ,0,-,USER_FACTOR_SCALE,-
+
+$BMoveStart = Button,Set,"*WorkMove",PathMoveBox,10, 90 ,70,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_WORK_MOVE,-}
+
+$MTopTxtX   = Text,"X", PathMoveBox,70, 135, 80,15,0,0,0x0,Black,-
+$MTopTxtY   = Text,"Y", PathMoveBox,150, 135, 80,15,0,0,0x0,Black,-
+$MTopTxtZ   = Text,"Z", PathMoveBox,230, 135, 80,15,0,0,0x0,Black,-
+
+$MchTxt    = Text,"MPos (mm)", PathMoveBox,5, 155 , 70,15,1,0,0x0,Black,-
+$MchxVal   = Value,"*", PathMoveBox,75, 150,0x0204,MachX,0,-,USER_FACTOR_SCALE,-
+$MchyVal   = Value,"*", PathMoveBox,155,150,0x0204,MachY,0,-,USER_FACTOR_SCALE,-
+$MchzVal   = Value,"*", PathMoveBox,235,150,0x0204,MachZ,0,-,USER_FACTOR_SCALE,-
+
+$BMachMov  = Button,Set,"*MachMove",PathMoveBox,10, 190 ,70,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_MACHINE_MOVE,-}
+
+
+// Path Box ------------------------------------------------------------------------------------------
+$PathDrawBox = Box,"*Path Parameters",PathMoveBox,340,0,320,250,0x0,-
+
+$PathArrayTxt  = Text,"PathArray ",PathDrawBox,10, 25, 85,15,1,0,0x0,Black,-
+$PathNumberTxt  = Text,"PathNumber",PathDrawBox,10, 55, 85,15,1,0,0x0,Black,-
+$PathScaleTxt   = Text,"PathScale",PathDrawBox,10,85,85,15,1,0,0x0,Black,-
+
+$PathArrayVal  = Value,"*", PathDrawBox,100, 20,0x0204,Arrno,0,-,0,-
+$PathNumberVal  = Value,"*", PathDrawBox,100, 50,0x0204,Pthno,0,-,0,-
+$PathScaleVal   = Value,"*", PathDrawBox,100,80,0x0204,PScale,0,-,USER_FACTOR_SCALE,-
+
+$BPathArray    = Button,Set,"*Arrno",PathArrayVal,  87, 0,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,107,-}
+$BPathNumber    = Button,Set,"*Pthno",PathNumberVal,  87, 0,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,108,-}
+
+$PathStNStopTxt = Text,"Path Stop-Nowait ",PathDrawBox,35,120,90,15,1,0,0x0,Black,-
+$PathStStopWTxt = Text,"Path Stop-Wait "  ,PathDrawBox,35,145,90,15,1,0,0x0,Black,-
+$PathStStartFly = Text,"Path Flying Start "  ,PathDrawBox,165,120,90,15,-1,0,0x0,Black,-
+
+$PathStartStop  = Checkbox,PathDrawBox,130,120,0x0,PStTyp,0x02,-
+$PathStartStpW  = Checkbox,PathDrawBox,130,145,0x0,PStTyp,0x04,-
+$PathStartStFly = Checkbox,PathDrawBox,150,120,0x0,PStTyp,0x08,-
+
+$BPathStart = Button,Set,"*PathStart",PathDrawBox,10, 210 ,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_PATHSTART,-}
+$BPathStop = Button,Set,"*PathCont",PathDrawBox,80, 210 ,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_PATHCONT,-}
+$BPathCont = Button,Set,"*PathStop",PathDrawBox,150, 210 ,60,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_STOP,-}
+
+
+
+// HandMode	------------------------------------------------------------------------------------------
+$Testbox= Box,"*Test Box",PathDrawBox,340,0,320,250,0x0,-
+
+$BTestStep1Ax  = Button,Set,"*Test 1" ,Testbox,10,  20,100,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_TEST_1,-}
+$BTestStep3Ax  = Button,Set,"*Test 2"  ,Testbox,120, 20,100,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_TEST_2,-}
+$BTestPath     = Button,Set,"*Test 3",Testbox,10, 50,100,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_TEST_3,-}
+$BTestFrequOsci    		= Button,Set,"*Test 4" ,Testbox,120,  50,100,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_TEST_4,-}
+$BTestExternalWeight   = Button,Set,"*Test 5",Testbox,10,  80,100,25,0x0000,Font,[177.100.201],DlgGray,-,{Cmd,CMD_TEST_5,-}
+
+
+

@@ -1,0 +1,8 @@
+/*********************************************************************
+** General Functions
+**
+*********************************************************************/
+void UserParamInit(void);
+void DoPathStart(long patharray[], long pathno, long masterpos, long flags);
+long GetSegmentCode(long patharray[], long crvnum, long segnum);
+long GetSegmentCount(long patharray[], long crvnum);

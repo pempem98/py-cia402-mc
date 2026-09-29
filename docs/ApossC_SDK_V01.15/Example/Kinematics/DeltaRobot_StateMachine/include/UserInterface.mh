@@ -1,0 +1,92 @@
+/*********************************************************************
+** User Parameter / Interface
+*
+* User parameters are used to communicate with the Monitor
+* dialog.  Please be aware of the fact that restarting the program
+* DOES reinitialize the user parameters, but it does NOT update the
+* user dialogue.  You must use the "Select Controller" button and
+* reselect the controller to reinitialize the dialog.
+*
+*********************************************************************/
+
+#define UPDATE_PERIOD   				500 	// ms - Update period for display
+#define USER_FACTOR_SCALE 				1000	// convert user units micrometers to milimeters (HMI)
+
+// Command objects
+#define USR_COMMAND     1				// SDO 0x2201 / 1
+	#define CMD_MOTOFF      	1		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_MOTON       	2		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_HOME        	3		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_STOP        	4		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_UPDATE_VEL    	5		// valus for USR_COMMAND (0x2201 / 1)
+
+	#define CMD_PATHSTART   	10		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_PATHNEXT    	11		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_PATHCONT    	12		// valus for USR_COMMAND (0x2201 / 1)
+
+	#define CMD_MACHINE_MOVE    15		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_WORK_MOVE 		16		// valus for USR_COMMAND (0x2201 / 1)
+
+	#define CMD_TEST_1  		40		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_TEST_2  		42		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_TEST_3			44		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_TEST_4    		46		// valus for USR_COMMAND (0x2201 / 1)
+	#define CMD_TEST_5   		48		// valus for USR_COMMAND (0x2201 / 1)
+
+// Settings objects
+#define USR_SCALE       		2		// SDO 0x2201 / 2
+#define USR_ARRNO       		3		// SDO 0x2201 / 3
+#define USR_PATHNO      		4		// SDO 0x2201 / 4
+#define USR_CYCLECMD  			5		// SDO 0x2201 / 5
+
+#define USR_MOVEVEL     		10		// SDO 0x2201 / 10
+#define USR_MOVEACC     		11		// SDO 0x2201 / 11
+#define USR_MOVEJERK    		12		// SDO 0x2201 / 12
+
+#define USR_MACHPOSX    		15		// SDO 0x2201 / 15
+#define USR_MACHPOSY    		16		// SDO 0x2201 / 16
+#define USR_MACHPOSZ    		17		// SDO 0x2201 / 17
+#define USR_WORKPOSX  			18		// SDO 0x2201 / 18
+#define USR_WORKPOSY  			19		// SDO 0x2201 / 19
+#define USR_WORKPOSZ  			20		// SDO 0x2201 / 20
+
+#define USR_PATHROTXYD  		30		// SDO 0x2201 / 30
+#define USR_PATHROTYZD  		31		// SDO 0x2201 / 31
+#define USR_PATHROTZXD  		32		// SDO 0x2201 / 32
+#define USR_PATHSTRCHX  		33		// SDO 0x2201 / 33
+#define USR_PATHSTRCHY  		34		// SDO 0x2201 / 34
+#define USR_PATHSTRCHZ  		35		// SDO 0x2201 / 35
+#define USR_PATHSCALE   		36		// SDO 0x2201 / 36
+
+#define USR_PATHVEL     		40		// SDO 0x2201 / 40
+#define USR_PATHACC     		41		// SDO 0x2201 / 41
+#define USR_PATHJERK    		42		// SDO 0x2201 / 42
+#define USR_PATHSTTYPE  		43		// SDO 0x2201 / 43
+#define USR_PATHSTARTMP 		44		// SDO 0x2201 / 44
+
+// Display objects
+#define USR_DSP_STATUS  		50		// SDO 0x2201 / 50
+	#define DSP_MOTOFF      		1	// valus for USR_DSP_STATUS (0x2201 / 50)
+	#define DSP_MOTON       		10	// valus for USR_DSP_STATUS (0x2201 / 50)
+	#define DSP_HOMING      		20	// valus for USR_DSP_STATUS (0x2201 / 50)
+	#define DSP_RUNNING     		30	// valus for USR_DSP_STATUS (0x2201 / 50)
+	#define DSP_RUNNING_WMOVE   	36	// valus for USR_DSP_STATUS (0x2201 / 50)
+	#define DSP_RUNNING_MMOVE		38	// valus for USR_DSP_STATUS (0x2201 / 50)
+
+#define USR_DSP_WRKPOSX 		60		// SDO 0x2201 / 60
+#define USR_DSP_WRKPOSY 		61		// SDO 0x2201 / 61
+#define USR_DSP_WRKPOSZ 		62		// SDO 0x2201 / 62
+#define USR_DSP_MCHPOSX 		63		// SDO 0x2201 / 63
+#define USR_DSP_MCHPOSY 		64		// SDO 0x2201 / 64
+#define USR_DSP_MCHPOSZ 		65		// SDO 0x2201 / 65
+
+#define USR_DSP_WAPOSX  		66		// SDO 0x2201 / 66
+#define USR_DSP_WAPOSY  		67		// SDO 0x2201 / 67
+#define USR_DSP_WAPOSZ  		68		// SDO 0x2201 / 68
+#define USR_DSP_WTRPOSX 		69		// SDO 0x2201 / 69
+#define USR_DSP_WTRPOSY 		70		// SDO 0x2201 / 70
+#define USR_DSP_WTRPOSZ 		71		// SDO 0x2201 / 71
+
+#define USR_DSP_FIXPNO  		80		// SDO 0x2201 / 80
+#define USR_DSP_FIXSTP  		81		// SDO 0x2201 / 81
+#define USR_DSP_MOVTIME 		82		// SDO 0x2201 / 82

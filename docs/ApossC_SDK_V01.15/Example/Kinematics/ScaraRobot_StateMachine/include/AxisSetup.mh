@@ -1,0 +1,31 @@
+/*********************************************************************
+** Includes
+*********************************************************************/
+#if  MACHINE==MINIMACS6_MOTORS
+	#include "Motors\Maxon_XYZ.mc"
+#else
+	#define C_MOTOR_MAX_RPM 2000
+	#define C_MOTOR_ENCRES 2000
+	#define C_MOTOR_POSERR C_MOTOR_ENCRES
+#endif
+
+/*********************************************************************
+** Defines
+*********************************************************************/
+#define AXIS1      				0       				// Axis number of "Axis 1".
+#define AXIS2     				1      					// Axis number of "Axis 2".
+#define AXIS3      				2       				// Axis number of "Axis 3".
+#define C_AXIS_VELRES			1000					// Velocity resolution, Scaling used for the velocity and acceleration/deceleration commands
+#define C_AXIS_MAX_RPM			C_MOTOR_MAX_RPM			// Maximum velocity in RPM
+#define C_AXIS_RAMPTYPE			RAMPTYPE_TRAPEZ			// Defines the ramptype
+#define C_AXIS_RAMPMIN			1000					// Maximum acceleration
+#define C_AXIS_JERKMIN			1000					// Minimum time (ms) required before reaching the maximum acceleration
+
+#define	C_AXIS_POSENCREV		1						// Number of revolutions of the motor
+#define	C_AXIS_POSENCQC			C_MOTOR_ENCRES			// Number of quadcounts in POSENCREV revolutions
+#define	C_AXIS_POSFACT_Z		1						// Number of revolutions of the input shaft
+#define	C_AXIS_POSFACT_N		1						// Number of revolutions of the output shaft in POSFACT_Z revolutions of the input shaft
+#define	C_AXIS_FEEDREV			1						// Number of revolutions of the gear box output shaft
+#define	C_AXIS_FEEDDIST			36000					// Distance travelled (in user units) in FEEDREV revolutions of the gear box output shaft
+
+long SetupAxis(long axis);

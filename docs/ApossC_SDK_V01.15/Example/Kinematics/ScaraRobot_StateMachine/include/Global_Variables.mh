@@ -1,0 +1,13 @@
+/*********************************************************************
+** DIM Array
+*********************************************************************/
+dim long  DeltaShow[250];
+
+/*********************************************************************
+** Global Variables
+*********************************************************************/
+long      Robot;             // Kinematics handle for the robot that is active.
+transform WorkToMachine;     // Work-to-Machine transformation.
+transform PathToWork;        // Path-to-Work transformation.
+
+double timer=0;				 // Trace movement duration
