@@ -198,6 +198,43 @@ class EtherCATMaster:
                      i, s.name, s.man, s.id, s.rev)
         return count
 
+    def mailbox_health(self, reads: int = 50) -> list[tuple[int, int, int]]:
+        """Read the statusword over SDO `reads` times per slave.
+
+        Returns [(slave, ok, total)]. Run in PRE-OP, before configuration: a
+        healthy link answers every request, so any loss here means something
+        else is on the wire - typically a second master (TwinCAT) holding the
+        same segment - and PDO configuration would fail with a WkcError.
+        """
+        results = []
+        for i, s in enumerate(self.master.slaves):
+            ok = 0
+            for _ in range(reads):
+                try:
+                    s.sdo_read(0x6041, 0)
+                    ok += 1
+                except Exception:  # noqa: BLE001 - counting failures is the point
+                    pass
+            results.append((i, ok, reads))
+        return results
+
+    def check_mailbox_health(self, reads: int = 50, min_ratio: float = 0.95) -> None:
+        """Raise BusError if any slave drops too many mailbox requests."""
+        bad = []
+        for i, ok, total in self.mailbox_health(reads):
+            log.info("Slave %d mailbox: %d/%d replies", i, ok, total)
+            if ok < min_ratio * total:
+                bad.append(f"slave {i} answered {ok}/{total}")
+        if bad:
+            raise BusError(
+                "unreliable mailbox communication (" + "; ".join(bad) + "). "
+                "The drives are not the likely cause. Check that no other "
+                "EtherCAT master uses this adapter: switch TwinCAT to Stop "
+                "(or stop the TwinCAT3 System Service) and close any TwinCAT "
+                "XAE online view. Run `python -m ethercat_mc.cli linktest "
+                "--adapter ...` to re-measure."
+            )
+
     def configure(self, config_funcs: Sequence[Callable[[int], None] | None]) -> None:
         """Attach each slave's PRE-OP configuration hook and map the PDOs.
 

@@ -73,6 +73,9 @@ class MotionController:
         """Full bring-up: open, scan, configure, SAFE-OP, cyclic, OP."""
         self.master.open(adapter)
         count = self.master.scan()
+        # Fail here with a clear message rather than as a WkcError halfway
+        # through writing the PDO mapping.
+        self.master.check_mailbox_health()
 
         highest = max((a.slave_position for a in self.cfg.axes), default=-1)
         if highest >= count:

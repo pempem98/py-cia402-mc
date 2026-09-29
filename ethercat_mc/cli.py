@@ -121,6 +121,32 @@ def cmd_scan(args) -> int:
     return 0
 
 
+def cmd_linktest(args) -> int:
+    """Measure mailbox reliability per slave. Read-only, nothing moves."""
+    from .config import BusConfig
+    from .master import EtherCATMaster
+
+    adapter = choose_adapter(args.adapter)
+    master = EtherCATMaster(BusConfig(adapter=adapter))
+    try:
+        master.open()
+        master.scan()
+        worst = 1.0
+        for i, ok, total in master.mailbox_health(args.reads):
+            ratio = ok / total
+            worst = min(worst, ratio)
+            flag = "OK" if ratio >= 0.95 else "UNRELIABLE"
+            print(f"  slave {i}: {ok}/{total} replies ({ratio:.0%})  {flag}")
+        if worst < 0.95:
+            print("\nSome requests went unanswered. Make sure no other EtherCAT "
+                  "master (TwinCAT) is using this adapter, then re-run.")
+            return 1
+        print("\nLink looks healthy.")
+        return 0
+    finally:
+        master.close()
+
+
 def cmd_info(args) -> int:
     """Show what the configuration file means, without touching the bus."""
     cfg = load(args.config)
@@ -321,6 +347,11 @@ def main(argv: list[str] | None = None) -> int:
     p_scan.add_argument("--all", action="store_true",
                         help="enumerate every adapter")
     p_scan.set_defaults(func=cmd_scan)
+
+    p_link = sub.add_parser("linktest", help="measure mailbox reliability")
+    p_link.add_argument("--adapter", help="adapter name (prompted if omitted)")
+    p_link.add_argument("--reads", type=int, default=200)
+    p_link.set_defaults(func=cmd_linktest)
 
     p_info = sub.add_parser("info", help="explain a config file, offline")
     p_info.add_argument("-c", "--config", required=True)
