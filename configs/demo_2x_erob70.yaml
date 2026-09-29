@@ -14,10 +14,10 @@
 # actually on the bus - trust that, not the label on the motor.
 
 bus:
-  # Leave null to be prompted. Once `scan` has confirmed which adapter the
-  # drives answer on, paste its \Device\NPF_{...} name here to skip the prompt.
-  # On this machine the EtherCAT port is the TwinCAT-Intel PCI adapter.
-  adapter: null
+  # The TwinCAT-Intel PCI Ethernet Adapter, confirmed by `scan`. Pinned by
+  # name because the prompt's index order changes whenever Windows adds an
+  # adapter (index 7 once pointed at Wi-Fi Direct). Set to null to be asked.
+  adapter: '\Device\NPF_{F7C77A8E-B845-460F-9552-BB8D10CB303A}'
 
   cycle_time_s: 0.002      # 2 ms. Raise to 0.004 if `s` reports high jitter.
   use_dc: false            # Two axes at 2 ms do not need DC; see README.

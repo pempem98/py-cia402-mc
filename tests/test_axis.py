@@ -6,6 +6,8 @@ reports a statusword plus a position that follows the commanded target. That is
 enough to test the enable sequence, mode switching and the safety latches
 without hardware.
 """
+import struct
+
 import pytest
 
 from ethercat_mc import cia402 as c
@@ -332,3 +334,41 @@ class TestOutputEncoding:
         axis.on_cycle(DT)
         assert axis.state.position_counts == 7200
         assert axis.position_deg == pytest.approx(2.0)
+
+
+class TestZeroing:
+    def test_set_zero_here_rezeroes_and_rewrites_drive_limits(self):
+        """An absolute encoder parked at 342 deg must become 0 deg, and the
+        drive-side 0x607D window must move with it (seen on real eRob70)."""
+        from ethercat_mc import homing
+        from ethercat_mc.drivers.erob import ERobDriver
+
+        slave = FakeSlave(position=342 * 3600)  # 342 deg at 3600 counts/deg
+        axis, slave = make_axis(slave=slave)
+        axis.driver = ERobDriver(axis.cfg)
+        axis.on_cycle(DT)
+        assert axis.position_deg == pytest.approx(342.0)
+
+        homing.set_zero_here(axis)
+        axis.on_cycle(DT)
+        assert axis.position_deg == pytest.approx(0.0)
+
+        limits = {sub: struct.unpack("<i", data)[0]
+                  for idx, sub, data in slave.sdo_writes if idx == 0x607D}
+        # [-180, 180] deg around the new zero, in raw counts.
+        assert limits[1] == (342 - 180) * 3600
+        assert limits[2] == (342 + 180) * 3600
+
+    def test_move_relative_to_new_zero(self):
+        from ethercat_mc import homing
+
+        slave = FakeSlave(position=342 * 3600)
+        axis, slave = make_axis(slave=slave)
+        axis.on_cycle(DT)
+        homing.set_zero_here(axis)
+        axis.request_enable()
+        run_cycles(axis, slave, 10)
+        axis.move_to(2.0)  # would be rejected as 344 deg without re-zeroing
+        run_cycles(axis, slave, 3000)
+        assert axis.position_deg == pytest.approx(2.0, abs=0.01)
+        assert slave.position == pytest.approx(344 * 3600, abs=5)

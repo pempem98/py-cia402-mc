@@ -38,6 +38,25 @@ def find_adapters() -> list[tuple[str, str]]:
     ]
 
 
+def _raise_thread_priority() -> None:
+    """Give the calling thread time-critical priority on Windows.
+
+    At normal priority the cyclic thread was observed to miss 30-50 ms at a
+    time, long enough for the drives to drop out of sync. Linux users should
+    run under SCHED_FIFO instead (e.g. `chrt -f 80`).
+    """
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    THREAD_PRIORITY_TIME_CRITICAL = 15
+    handle = ctypes.windll.kernel32.GetCurrentThread()
+    if not ctypes.windll.kernel32.SetThreadPriority(
+        handle, THREAD_PRIORITY_TIME_CRITICAL
+    ):
+        log.warning("Could not raise cyclic thread priority")
+
+
 def _boost_timer_resolution() -> Callable[[], None]:
     """Ask Windows for 1 ms timer resolution; return a function to undo it.
 
@@ -85,6 +104,19 @@ class CyclicTask:
         self.last_error: BaseException | None = None
         #: Set when the loop gives up; the application should stop.
         self.faulted = threading.Event()
+        #: The working counter only reaches `expected_wkc` once every slave is
+        #: in OP; in SAFE-OP outputs are not counted. Monitoring starts when
+        #: the master calls arm_wkc_check() after the OP transition.
+        self._wkc_armed = False
+        #: Cycles that took more than twice the period, for diagnostics.
+        self.late_cycles = 0
+
+    def arm_wkc_check(self) -> None:
+        """Start treating a low working counter as a bus fault."""
+        self.wkc_errors = 0
+        self.max_jitter_s = 0.0
+        self.late_cycles = 0
+        self._wkc_armed = True
 
     def add_callback(self, fn: Callable[[float], None]) -> None:
         """Register a per-cycle callback. Called from the cyclic thread, so it
@@ -115,6 +147,7 @@ class CyclicTask:
 
     def _run(self) -> None:
         restore_timer = _boost_timer_resolution()
+        _raise_thread_priority()
         period = self.cycle_time_s
         next_wake = time.perf_counter()
         last = next_wake
@@ -125,13 +158,17 @@ class CyclicTask:
                 last = now
                 if self.cycle_count > 0:
                     self.max_jitter_s = max(self.max_jitter_s, abs(dt - period))
+                    if dt > 2 * period:
+                        self.late_cycles += 1
 
                 self._master.send_processdata()
                 self.actual_wkc = self._master.receive_processdata(
                     timeout=self._pdo_timeout_us
                 )
 
-                if self.actual_wkc < self.expected_wkc:
+                if not self._wkc_armed:
+                    pass
+                elif self.actual_wkc < self.expected_wkc:
                     self.wkc_errors += 1
                     if self.wkc_errors >= self._max_wkc_errors:
                         raise BusError(
@@ -171,6 +208,11 @@ class EtherCATMaster:
     def __init__(self, cfg: BusConfig):
         self.cfg = cfg
         self.master = pysoem.Master()
+        # Release the GIL inside every blocking pysoem call. Without this, a
+        # 50 ms state_check or a slow SDO read on the application thread
+        # starves the cyclic thread; the drives then see irregular process
+        # data (measured 31 ms gaps) and refuse the SAFE-OP -> OP transition.
+        self.master.always_release_gil = True
         self.task: CyclicTask | None = None
         self._open = False
         self.slave_count = 0
@@ -279,16 +321,34 @@ class EtherCATMaster:
         if self.task is None or not self.task.running:
             raise BusError("start the cyclic task before requesting OP")
 
-        self.master.state = pysoem.OP_STATE
-        self.master.write_state()
-
         deadline = time.time() + timeout_s
         while time.time() < deadline:
-            if self.master.state_check(pysoem.OP_STATE, 50_000) == pysoem.OP_STATE:
+            # Re-issue the request every pass, per slave: a slave that missed
+            # the first request (seen on eRob) otherwise sits in SAFE-OP with
+            # no AL error until the timeout.
+            self.master.read_state()
+            for s in self.master.slaves:
+                if s.state & pysoem.STATE_ERROR:
+                    # e.g. SAFE-OP + error after a watchdog trip: the error
+                    # must be acknowledged before the slave accepts OP.
+                    log.warning("Acknowledging AL error on %s: %s", s.name,
+                                pysoem.al_status_code_to_string(s.al_status))
+                    s.state = (s.state & 0x0F) | pysoem.STATE_ACK
+                    s.write_state()
+                elif s.state != pysoem.OP_STATE:
+                    s.state = pysoem.OP_STATE
+                    s.write_state()
+            if all(s.state == pysoem.OP_STATE for s in self.master.slaves):
+                self.task.arm_wkc_check()
                 log.info("Bus in OP")
                 return
             if self.task.faulted.is_set():
                 raise BusError(f"cyclic task failed: {self.task.last_error}")
+            # Poll with a single-frame read_state() and a plain sleep, never a
+            # blocking state_check(): that call held the cyclic thread off the
+            # wire for its whole timeout (the drives measured 50 ms cycles)
+            # and they then refused OP.
+            time.sleep(0.02)
         self.master.read_state()
         details = "; ".join(
             f"slave {i} ({s.name}): state={s.state} "

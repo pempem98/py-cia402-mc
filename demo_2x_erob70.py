@@ -27,6 +27,7 @@ import sys
 import time
 
 from ethercat_mc import MotionController, load_config
+from ethercat_mc import homing
 from ethercat_mc.axis import AxisError
 from ethercat_mc.cli import choose_adapter
 from ethercat_mc.master import BusError
@@ -222,6 +223,18 @@ def main(argv: list[str] | None = None) -> int:
             mc.start(adapter)
             print("\nBus is operational:")
             show(mc)
+
+            # The absolute encoders report wherever the shafts happen to sit
+            # (e.g. 342 deg), usually outside the +/-180 deg demo window. The
+            # joints are free-standing, so the current pose becomes 0 deg and
+            # every move below is relative to it. This also rewrites the
+            # drive-side limits around the new zero.
+            print("\nSetting the current pose as 0 deg:")
+            for axis in mc.axes:
+                raw = axis.position_deg
+                homing.set_zero_here(axis)
+                print(f"    {axis.name}: was {raw:8.3f} deg -> now "
+                      f"{axis.position_deg:+.3f} deg")
 
             if not confirm("Enable both drives?", args.yes):
                 print("Nothing enabled; exiting.")

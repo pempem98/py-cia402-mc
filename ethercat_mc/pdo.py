@@ -98,6 +98,18 @@ class PdoMap:
         return {e.name: v for e, v in zip(self.entries, values)}
 
 
+def pad_to_even(pdo: PdoMap) -> PdoMap:
+    """Append an 8-bit gap entry if the PDO has an odd byte length.
+
+    eRob (and many other drives) reject an odd sync manager length with AL
+    status "Invalid sync manager configuration" on the way to SAFE-OP. Object
+    0x0000 is the CiA 301 dummy entry: it reserves space and carries nothing.
+    """
+    if pdo.size % 2:
+        pdo.entries.append(PdoEntry("_pad", 0x0000, 0, 8))
+    return pdo
+
+
 # --- Standard PDO layouts ------------------------------------------------
 # Names here are the contract between drivers and the motion layer: the axis
 # code looks up "controlword", "target_position", ... regardless of vendor.
@@ -111,7 +123,7 @@ def default_rx_pdo(mapping_index: int = 0x1600) -> PdoMap:
     """
     from . import cia402 as c
 
-    return PdoMap(
+    return pad_to_even(PdoMap(
         mapping_index,
         [
             PdoEntry("controlword", c.OD_CONTROLWORD, 0, 16, signed=False),
@@ -120,14 +132,14 @@ def default_rx_pdo(mapping_index: int = 0x1600) -> PdoMap:
             PdoEntry("target_torque", c.OD_TARGET_TORQUE, 0, 16, signed=True),
             PdoEntry("mode_of_operation", c.OD_MODE_OF_OP, 0, 8, signed=True),
         ],
-    )
+    ))
 
 
 def default_tx_pdo(mapping_index: int = 0x1A00) -> PdoMap:
     """Drive -> master: statusword, actual values and the active mode."""
     from . import cia402 as c
 
-    return PdoMap(
+    return pad_to_even(PdoMap(
         mapping_index,
         [
             PdoEntry("statusword", c.OD_STATUSWORD, 0, 16, signed=False),
@@ -136,7 +148,7 @@ def default_tx_pdo(mapping_index: int = 0x1A00) -> PdoMap:
             PdoEntry("torque_actual", c.OD_TORQUE_ACTUAL, 0, 16, signed=True),
             PdoEntry("mode_display", c.OD_MODE_OF_OP_DISPLAY, 0, 8, signed=True),
         ],
-    )
+    ))
 
 
 def minimal_rx_pdo(mapping_index: int = 0x1600) -> PdoMap:

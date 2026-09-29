@@ -126,9 +126,17 @@ def set_zero_here(axis: Axis) -> None:
     This adjusts the master-side offset only; it does not touch the drive's
     own home position. Persist `zero_offset_counts` in the YAML to keep it
     across restarts.
+
+    The drive-side position limits (0x607D) are expressed in raw counts, so
+    they are rewritten around the new zero. Otherwise the drive would keep a
+    window centred on the old zero, and an axis re-zeroed far from raw 0
+    would sit outside its own drive limits.
     """
     axis.cfg.zero_offset_counts = axis.state.position_counts
+    axis.reset_fault()
     axis._seed_setpoints()
+    if axis.driver is not None:
+        axis.driver.apply_motion_limits(axis.slave)
     log.info("%s: zero set at raw count %d", axis.name, axis.cfg.zero_offset_counts)
 
 

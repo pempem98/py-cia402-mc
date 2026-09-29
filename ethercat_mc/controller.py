@@ -99,13 +99,21 @@ class MotionController:
         # PDO mapping is live now, so the axis objects can be built.
         for axis_cfg, slave, driver in pending:
             axis = Axis(axis_cfg, slave, driver.rx_pdo(), driver.tx_pdo())
-            driver.apply_motion_limits(slave)
+            axis.driver = driver
             self.axes.append(axis)
             self._by_name[axis.name] = axis
 
+        # Start process data immediately. The slaves are in SAFE-OP now and
+        # their sync manager watchdog (~100 ms) is running: any gap here -
+        # such as the SDO writes below - makes them refuse OP with AL status
+        # "Sync manager watchdog", which is what happened on the eRob bus.
         task = self.master.start_cyclic()
         for axis in self.axes:
             task.add_callback(axis.on_cycle)
+
+        # Mailbox traffic runs alongside the cyclic loop from here on.
+        for _, slave, driver in pending:
+            driver.apply_motion_limits(slave)
 
         self.master.go_operational()
         self._started = True

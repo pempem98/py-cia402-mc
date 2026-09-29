@@ -103,6 +103,9 @@ class Axis:
         self._halt = False
         self._first_cycle = True
         self._homing_active = False
+        #: The vendor driver, set by MotionController, so drive-side settings
+        #: that depend on the zero offset can be rewritten after re-zeroing.
+        self.driver = None
         #: Log the "outside limits" warning once, not every cycle.
         self._outside_limits_warned = False
         #: Distance outside the limit window on the previous cycle, in degrees.

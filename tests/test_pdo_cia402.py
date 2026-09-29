@@ -81,17 +81,27 @@ class TestPdoMap:
         names = [e.name for e in pdo.entries]
         assert names == [
             "controlword", "target_position", "target_velocity",
-            "target_torque", "mode_of_operation",
+            "target_torque", "mode_of_operation", "_pad",
         ]
-        assert pdo.size == 2 + 4 + 4 + 2 + 1
+        assert pdo.size == 2 + 4 + 4 + 2 + 1 + 1
 
     def test_default_tx_layout(self):
         pdo = default_tx_pdo()
         names = [e.name for e in pdo.entries]
         assert names == [
             "statusword", "position_actual", "velocity_actual",
-            "torque_actual", "mode_display",
+            "torque_actual", "mode_display", "_pad",
         ]
+
+    def test_default_layouts_have_even_length(self):
+        """eRob rejects an odd sync manager length ("Invalid sync manager
+        configuration") on the way to SAFE-OP, seen on real hardware."""
+        assert default_rx_pdo().size % 2 == 0
+        assert default_tx_pdo().size % 2 == 0
+
+    def test_padding_entry_is_the_dummy_object(self):
+        pad = default_rx_pdo().entries[-1]
+        assert pad.mapping_value == 0x00000008
 
     def test_mode_of_operation_is_signed_byte(self):
         """0x6060 is INTEGER8: CSP is 8, but negative vendor modes exist."""
