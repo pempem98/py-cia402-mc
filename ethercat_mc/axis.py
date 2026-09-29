@@ -191,11 +191,32 @@ class Axis:
         from the measured position so the switch does not cause a jump."""
         if isinstance(mode, str):
             mode = self._mode_from_name(mode)
+        if not self.rx_pdo.has("mode_of_operation"):
+            # Not mapped (e.g. the eRob vendor layout): set it over SDO. This
+            # blocks on the mailbox, which is fine on the application thread.
+            import struct
+
+            self.slave.sdo_write(c.OD_MODE_OF_OP, 0, struct.pack("<b", int(mode)))
+            # 0x6061 is not in the TxPDO either, so read the drive's answer
+            # back once; `describe()` and callers rely on mode_display.
+            try:
+                raw = self.slave.sdo_read(c.OD_MODE_OF_OP_DISPLAY, 0)
+                self.state.mode_display = struct.unpack("<b", raw[:1])[0]
+            except Exception:  # noqa: BLE001 - display only
+                log.debug("%s: could not read back 0x6061", self.name)
         with self._mode_lock:
             self.mode = mode
             self._outputs["mode_of_operation"] = int(mode)
             self._seed_setpoints()
         log.info("%s: mode -> %s", self.name, mode.name)
+
+    def _require_mapped(self, entry: str, what: str) -> None:
+        """Refuse a command whose setpoint would never reach the drive."""
+        if not self.rx_pdo.has(entry):
+            raise AxisError(
+                f"{self.name}: {what} needs '{entry}' in the RxPDO, which this "
+                f"axis does not map; add it via the axis rx_pdo config"
+            )
 
     def _seed_setpoints(self) -> None:
         """Align every setpoint with the measured state. Call before enabling
@@ -230,6 +251,7 @@ class Axis:
 
     def set_velocity(self, velocity_deg_s: float) -> None:
         """Command a velocity, in application deg/s (CSV)."""
+        self._require_mapped("target_velocity", "set_velocity")
         if self.mode is not c.Mode.CSV:
             raise AxisError(
                 f"{self.name}: set_velocity needs CSV, mode is {self.mode.name}"
@@ -246,6 +268,7 @@ class Axis:
 
     def set_torque(self, torque_permille: float) -> None:
         """Command a torque, in per-mille of rated torque (CST)."""
+        self._require_mapped("target_torque", "set_torque")
         if self.mode is not c.Mode.CST:
             raise AxisError(
                 f"{self.name}: set_torque needs CST, mode is {self.mode.name}"

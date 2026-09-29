@@ -372,3 +372,51 @@ class TestZeroing:
         run_cycles(axis, slave, 3000)
         assert axis.position_deg == pytest.approx(2.0, abs=0.01)
         assert slave.position == pytest.approx(344 * 3600, abs=5)
+
+
+class TestERobLayout:
+    """The eRob driver uses the ZeroErr ESI default PDOs (10 bytes each)."""
+
+    def _axis(self):
+        from ethercat_mc.drivers.erob import ERobDriver
+
+        cfg = AxisConfig(name="j", slave_position=0, counts_per_rev=1_296_000)
+        d = ERobDriver(cfg)
+        slave = FakeSlave()
+        return Axis(cfg, slave, d.rx_pdo(), d.tx_pdo()), slave, d
+
+    def test_layout_matches_the_esi(self):
+        _, _, d = self._axis()
+        assert [e.mapping_value for e in d.rx_pdo().entries] == [
+            0x607A0020, 0x60FE0020, 0x60400010]
+        assert [e.mapping_value for e in d.tx_pdo().entries] == [
+            0x60640020, 0x60FD0020, 0x60410010]
+        assert d.rx_pdo().size == d.tx_pdo().size == 10
+
+    def test_mode_is_written_over_sdo_when_not_mapped(self):
+        axis, slave, _ = self._axis()
+        slave.sdo_writes.clear()
+        axis.set_mode(c.Mode.CSP)
+        assert (0x6060, 0, struct.pack("<b", 8)) in slave.sdo_writes
+
+    def test_unmapped_velocity_is_refused(self):
+        """A CSV setpoint that the PDO cannot carry must not be silently lost."""
+        axis, _, _ = self._axis()
+        axis.mode = c.Mode.CSV
+        with pytest.raises(AxisError, match="does not map"):
+            axis.set_velocity(1.0)
+
+    def test_unmapped_torque_is_refused(self):
+        axis, _, _ = self._axis()
+        axis.mode = c.Mode.CST
+        with pytest.raises(AxisError, match="does not map"):
+            axis.set_torque(10)
+
+    def test_packs_controlword_and_target(self):
+        axis, _, d = self._axis()
+        axis._outputs["controlword"] = 0x0F
+        axis._outputs["target_position"] = -5
+        values = d.rx_pdo().unpack(d.rx_pdo().pack(axis._outputs))
+        assert values["controlword"] == 0x0F
+        assert values["target_position"] == -5
+        assert values["digital_outputs"] == 0

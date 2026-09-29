@@ -48,13 +48,20 @@ def _raise_thread_priority() -> None:
     if sys.platform != "win32":
         return
     import ctypes
+    from ctypes import wintypes
 
     THREAD_PRIORITY_TIME_CRITICAL = 15
-    handle = ctypes.windll.kernel32.GetCurrentThread()
-    if not ctypes.windll.kernel32.SetThreadPriority(
-        handle, THREAD_PRIORITY_TIME_CRITICAL
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    # Declare the types: without them ctypes truncates the pseudo-handle
+    # (-2) to 32 bits on 64-bit Windows and the call silently fails.
+    kernel32.GetCurrentThread.restype = wintypes.HANDLE
+    kernel32.SetThreadPriority.argtypes = [wintypes.HANDLE, ctypes.c_int]
+    kernel32.SetThreadPriority.restype = wintypes.BOOL
+    if not kernel32.SetThreadPriority(
+        kernel32.GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL
     ):
-        log.warning("Could not raise cyclic thread priority")
+        log.warning("Could not raise cyclic thread priority (error %d)",
+                    ctypes.get_last_error())
 
 
 def _boost_timer_resolution() -> Callable[[], None]:
@@ -216,6 +223,12 @@ class EtherCATMaster:
         self.task: CyclicTask | None = None
         self._open = False
         self.slave_count = 0
+        self._supervisor: threading.Thread | None = None
+        self._supervisor_stop = threading.Event()
+        #: Times each slave was found outside OP by the supervisor.
+        self.op_drops: list[int] = []
+        #: Called as fn(slave_index, al_state) when a slave leaves OP.
+        self.on_slave_left_op: Callable[[int, int], None] | None = None
 
     # --- bring-up --------------------------------------------------------
     def open(self, adapter: str | None = None) -> None:
@@ -339,9 +352,23 @@ class EtherCATMaster:
                     s.state = pysoem.OP_STATE
                     s.write_state()
             if all(s.state == pysoem.OP_STATE for s in self.master.slaves):
-                self.task.arm_wkc_check()
-                log.info("Bus in OP")
-                return
+                # eRob70: a slave can report OP and then sit in SAFE-OP with no
+                # AL error, ignoring further OP requests. It shows within a few
+                # hundred ms, so settle, re-check, and walk any stuck slave
+                # back up from PRE-OP, which was measured to recover it every
+                # time (11/11, at most two attempts).
+                time.sleep(0.3)
+                self.master.read_state()
+                stuck = [i for i, sl in enumerate(self.master.slaves)
+                         if sl.state != pysoem.OP_STATE]
+                for i in stuck:
+                    if not self.cycle_slave_to_op(i):
+                        break
+                else:
+                    self.task.arm_wkc_check()
+                    log.info("Bus in OP")
+                    return
+                continue
             if self.task.faulted.is_set():
                 raise BusError(f"cyclic task failed: {self.task.last_error}")
             # Poll with a single-frame read_state() and a plain sleep, never a
@@ -359,8 +386,95 @@ class EtherCATMaster:
         raise BusError(f"bus did not reach OP: {details}")
 
     # --- teardown --------------------------------------------------------
+    def _wait_slave_state(self, slave, want: int, timeout_s: float) -> bool:
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            self.master.read_state()
+            if slave.state == want:
+                return True
+            time.sleep(0.005)
+        return False
+
+    def cycle_slave_to_op(self, index: int, attempts: int = 3) -> bool:
+        """Walk one slave PRE-OP -> SAFE-OP -> OP while the cyclic task runs.
+
+        Used for a slave stuck in SAFE-OP without an AL error. Its PDO mapping
+        and sync manager setup survive the trip through PRE-OP, so nothing has
+        to be reconfigured.
+        """
+        slave = self.master.slaves[index]
+        for attempt in range(1, attempts + 1):
+            for want in (pysoem.PREOP_STATE, pysoem.SAFEOP_STATE, pysoem.OP_STATE):
+                slave.state = want
+                slave.write_state()
+                if not self._wait_slave_state(slave, want, 1.0):
+                    break
+            else:
+                log.info("Slave %d (%s) back in OP after %d PRE-OP cycle(s)",
+                         index, slave.name, attempt)
+                return True
+        log.error("Slave %d (%s) could not be brought back to OP", index, slave.name)
+        return False
+
+    # --- supervision -----------------------------------------------------
+    def start_supervisor(self, period_s: float = 0.1) -> None:
+        """Watch AL states and bring any slave that leaves OP back into it.
+
+        eRob70 drives were observed dropping from OP to SAFE-OP with no AL
+        error, some time after the bus had reached OP. In SAFE-OP a drive
+        ignores its outputs while still reporting inputs, so an enable request
+        simply never arrives. This is SOEM's `ecatcheck` pattern: poll the
+        state, acknowledge errors, re-request OP.
+        """
+        self.op_drops = [0] * len(self.master.slaves)
+        self._supervisor_stop.clear()
+        self._supervisor = threading.Thread(
+            target=self._supervise, args=(period_s,),
+            name="ethercat-supervisor", daemon=True,
+        )
+        self._supervisor.start()
+
+    def stop_supervisor(self) -> None:
+        self._supervisor_stop.set()
+        if self._supervisor is not None:
+            self._supervisor.join(timeout=1.0)
+            self._supervisor = None
+
+    def _supervise(self, period_s: float) -> None:
+        outside = [0] * len(self.master.slaves)  # consecutive polls outside OP
+        while not self._supervisor_stop.wait(period_s):
+            try:
+                self.master.read_state()
+                for i, s in enumerate(self.master.slaves):
+                    if s.state == pysoem.OP_STATE:
+                        outside[i] = 0
+                        continue
+                    outside[i] += 1
+                    self.op_drops[i] += 1
+                    log.warning(
+                        "Slave %d (%s) left OP: state 0x%02X, %s",
+                        i, s.name, s.state,
+                        pysoem.al_status_code_to_string(s.al_status),
+                    )
+                    if self.on_slave_left_op is not None:
+                        self.on_slave_left_op(i, s.state)
+                    if s.state & pysoem.STATE_ERROR:
+                        s.state = (s.state & 0x0F) | pysoem.STATE_ACK
+                        s.write_state()
+                    elif outside[i] >= 2:
+                        # A plain OP request is ignored by a stuck eRob; the
+                        # PRE-OP round trip is what recovers it.
+                        if self.cycle_slave_to_op(i):
+                            outside[i] = 0
+                    else:
+                        s.state = pysoem.OP_STATE
+                        s.write_state()
+            except Exception:  # noqa: BLE001 - supervision must keep running
+                log.debug("supervisor pass failed", exc_info=True)
+
     def close(self) -> None:
         """Stop the loop and put the bus back in INIT. Safe to call twice."""
+        self.stop_supervisor()
         if self.task is not None:
             self.task.stop()
             self.task = None

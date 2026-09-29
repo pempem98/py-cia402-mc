@@ -114,8 +114,13 @@ class MotionController:
         # Mailbox traffic runs alongside the cyclic loop from here on.
         for _, slave, driver in pending:
             driver.apply_motion_limits(slave)
+        for axis in self.axes:
+            if not axis.rx_pdo.has("mode_of_operation"):
+                axis.set_mode(axis.mode)  # writes 0x6060 over SDO
 
         self.master.go_operational()
+        self.master.on_slave_left_op = self._slave_left_op
+        self.master.start_supervisor()
         self._started = True
 
         # Let a few cycles run so every axis has a real statusword before the
@@ -123,6 +128,23 @@ class MotionController:
         time.sleep(0.05)
         for axis in self.axes:
             log.info("%s", axis.describe())
+
+    def _slave_left_op(self, position: int, al_state: int) -> None:
+        """A slave dropped out of OP. The supervisor re-requests OP; here the
+        axis on that slave is tripped if it was enabled, because its outputs
+        stopped being applied mid-operation. An axis that was not yet enabled
+        just waits for the slave to come back, so enabling resumes by itself.
+        """
+        for axis in self.axes:
+            if axis.cfg.slave_position != position:
+                continue
+            if axis._enabled.is_set() and axis.fault_reason is None:
+                axis.fault_reason = (
+                    f"slave {position} left OP (AL state 0x{al_state:02X}) "
+                    f"while enabled"
+                )
+                axis._want_enable = False
+                axis.stop()
 
     def stop(self) -> None:
         """Disable every axis, then take the bus down. Safe to call twice."""

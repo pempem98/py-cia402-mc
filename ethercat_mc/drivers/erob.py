@@ -13,6 +13,7 @@ import struct
 import pysoem
 
 from .. import cia402 as c
+from ..pdo import PdoEntry, PdoMap, pdo_from_config
 from .base import Driver, register
 
 log = logging.getLogger(__name__)
@@ -24,6 +25,8 @@ ZEROERR_VENDOR_ID = 0x5A65726F
 #: Interpolation time period (0x60C2:1 value, :2 exponent). CSP needs this to
 #: match the master's cycle time or the drive's interpolator drifts.
 OD_INTERPOLATION_TIME = 0x60C2
+OD_DIGITAL_INPUTS = 0x60FD
+OD_DIGITAL_OUTPUTS = 0x60FE
 
 
 @register
@@ -31,6 +34,35 @@ class ERobDriver(Driver):
     key = "erob"
     display_name = "ZeroErr eRob"
     vendor_id = None  # eRob firmware revisions report different IDs; see below
+
+    # The layouts below are the manufacturer's defaults from the ZeroErr ESI
+    # ("ZeroErr Driver_V3.2.0.xml", 0x1600 / 0x1A00): 10 bytes each, only 16-
+    # and 32-bit entries, and no mode of operation in the PDO. A larger
+    # generic layout with 8-bit entries (13 bytes, then padded to 14) was
+    # accepted by the drive but it intermittently refused to stay in OP, so
+    # the eRob driver sticks to what the vendor ships. The mode is set over
+    # SDO (0x6060), as the original single-motor script did.
+    #
+    # Consequence: CSV/CST setpoints are not mapped. Add them through the
+    # axis `rx_pdo`/`tx_pdo` config only after testing on hardware.
+
+    def rx_pdo(self) -> PdoMap:
+        if self.cfg.rx_pdo:
+            return pdo_from_config(self.cfg.rx_pdo, self.cfg.rx_pdo_index)
+        return PdoMap(self.cfg.rx_pdo_index, [
+            PdoEntry("target_position", c.OD_TARGET_POSITION, 0, 32, signed=True),
+            PdoEntry("digital_outputs", OD_DIGITAL_OUTPUTS, 0, 32),
+            PdoEntry("controlword", c.OD_CONTROLWORD, 0, 16),
+        ])
+
+    def tx_pdo(self) -> PdoMap:
+        if self.cfg.tx_pdo:
+            return pdo_from_config(self.cfg.tx_pdo, self.cfg.tx_pdo_index)
+        return PdoMap(self.cfg.tx_pdo_index, [
+            PdoEntry("position_actual", c.OD_POSITION_ACTUAL, 0, 32, signed=True),
+            PdoEntry("digital_inputs", OD_DIGITAL_INPUTS, 0, 32),
+            PdoEntry("statusword", c.OD_STATUSWORD, 0, 16),
+        ])
 
     def configure_extra(self, slave: pysoem.CdefSlave) -> None:
         """Set the interpolation time period to the master's cycle time.
